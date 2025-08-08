@@ -1,6 +1,59 @@
 import { Hono } from "hono";
+import { JWTService, SessionService } from "./auth/jwt";
+import { UserRepository } from "./db/repository";
+import { createAuthRoutes } from "./routes/auth";
+import { createAuthMiddleware, corsMiddleware } from "./auth/middleware";
+
 const app = new Hono<{ Bindings: Env }>();
 
-app.get("/api/", (c) => c.json({ name: "Cloudflare" }));
+// CORS middleware
+app.use('*', corsMiddleware());
+
+// Initialize services
+app.use('*', async (c, next) => {
+  // Initialize services and attach to context
+  const jwtService = new JWTService(c.env.JWT_SECRET);
+  const sessionService = new SessionService(c.env.SESSIONS);
+  const userRepo = new UserRepository(c.env.DB);
+
+  c.set('jwtService', jwtService);
+  c.set('sessionService', sessionService);
+  c.set('userRepo', userRepo);
+
+  await next();
+});
+
+// Health check
+app.get("/api/health", (c) => c.json({
+  status: "ok",
+  timestamp: new Date().toISOString(),
+  environment: c.env.ENVIRONMENT
+}));
+
+// Auth routes
+app.route('/api/auth', createAuthRoutes(
+  new JWTService(''), // Will be replaced by middleware
+  new SessionService({} as KVNamespace), // Will be replaced by middleware
+  new UserRepository({} as D1Database), // Will be replaced by middleware
+  {} as KVNamespace // Will be replaced by middleware
+));
+
+// Protected routes (require authentication)
+app.use('/api/protected/*', async (c, next) => {
+  const jwtService = c.get('jwtService') as JWTService;
+  const sessionService = c.get('sessionService') as SessionService;
+  const userRepo = c.get('userRepo') as UserRepository;
+
+  return createAuthMiddleware(jwtService, sessionService, userRepo)(c, next);
+});
+
+// Test protected route
+app.get("/api/protected/test", (c) => {
+  const auth = c.get('auth');
+  return c.json({
+    message: "This is a protected route",
+    user: auth.user
+  });
+});
 
 export default app;

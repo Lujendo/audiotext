@@ -3,6 +3,29 @@
 // Runtime types generated with workerd@1.20250617.0 2025-04-01 nodejs_compat
 declare namespace Cloudflare {
 	interface Env {
+		// Environment variables
+		ENVIRONMENT: string;
+		JWT_SECRET: string;
+		CORS_ORIGIN: string;
+
+		// KV Namespaces
+		SESSIONS: KVNamespace;
+		CACHE: KVNamespace;
+
+		// D1 Database
+		DB: D1Database;
+
+		// R2 Bucket
+		AUDIO_BUCKET: R2Bucket;
+
+		// Vectorize Index
+		VECTORIZE_INDEX: VectorizeIndex;
+
+		// Workers AI
+		AI: Ai;
+
+		// Analytics Engine
+		ANALYTICS: AnalyticsEngineDataset;
 	}
 }
 interface Env extends Cloudflare.Env {}
