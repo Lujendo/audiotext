@@ -13,49 +13,8 @@
     "not_found_handling": "single-page-application"
   },
   "vars": {
-    "ENVIRONMENT": "development",
-    "JWT_SECRET": "your-jwt-secret-key-change-in-production",
-    "CORS_ORIGIN": "http://localhost:5173"
-  },
-  "kv_namespaces": [
-    {
-      "binding": "SESSIONS",
-      "id": "your-sessions-kv-namespace-id",
-      "preview_id": "your-sessions-kv-preview-id"
-    },
-    {
-      "binding": "CACHE",
-      "id": "your-cache-kv-namespace-id",
-      "preview_id": "your-cache-kv-preview-id"
-    }
-  ],
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "audiotext-db",
-      "database_id": "your-d1-database-id"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "AUDIO_BUCKET",
-      "bucket_name": "audiotext-files",
-      "preview_bucket_name": "audiotext-files-preview"
-    }
-  ],
-  "vectorize": [
-    {
-      "binding": "VECTORIZE_INDEX",
-      "index_name": "audiotext-search"
-    }
-  ],
-  "ai": {
-    "binding": "AI"
-  },
-  "analytics_engine_datasets": [
-    {
-      "binding": "ANALYTICS",
-      "dataset": "audiotext-analytics"
-    }
-  ]
+    "ENVIRONMENT": "production",
+    "JWT_SECRET": "temp-jwt-secret-key-for-demo",
+    "CORS_ORIGIN": "https://audiotext.info-eac.workers.dev"
+  }
 }
