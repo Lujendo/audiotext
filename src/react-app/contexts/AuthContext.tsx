@@ -57,9 +57,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (data.success && data.data.user) {
           setUser(data.data.user);
         }
+      } else if (response.status === 401) {
+        // 401 is expected when not authenticated - no need to log error
+        setUser(null);
+      } else {
+        // Only log unexpected errors
+        console.error('Auth check failed with status:', response.status);
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
+      // Only log network errors or other unexpected issues
+      console.error('Auth check network error:', error);
     } finally {
       setLoading(false);
     }

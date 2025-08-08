@@ -155,17 +155,22 @@ export function corsMiddleware() {
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:3000',
+      'http://localhost:5174',
       'https://audiotext.pages.dev',
-      // Add your production domain here
+      'https://audiotext.info-eac.workers.dev',
     ];
 
+    // Handle CORS for cross-origin requests
     if (origin && allowedOrigins.includes(origin)) {
       c.header('Access-Control-Allow-Origin', origin);
+      c.header('Access-Control-Allow-Credentials', 'true');
+    } else if (!origin) {
+      // Same-origin requests (no Origin header) - allow credentials
+      c.header('Access-Control-Allow-Credentials', 'true');
     }
 
     c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
-    c.header('Access-Control-Allow-Credentials', 'true');
     c.header('Access-Control-Max-Age', '86400');
 
     if (c.req.method === 'OPTIONS') {
