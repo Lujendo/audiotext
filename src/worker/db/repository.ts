@@ -4,18 +4,15 @@ import {
   DatabaseAudioFile,
   DatabaseTranscription,
   DatabaseActivityLog,
-  DatabaseExport,
   CreateUser,
   CreateProject,
   CreateAudioFile,
   CreateTranscription,
   CreateActivityLog,
-  CreateExport,
   UpdateUser,
   UpdateProject,
   UpdateAudioFile,
   UpdateTranscription,
-  UpdateExport,
   generateId,
   getCurrentTimestamp,
 } from './models';
@@ -93,7 +90,7 @@ export class UserRepository {
       .bind(id)
       .run();
 
-    return result.changes > 0;
+    return (result.meta?.changes || 0) > 0;
   }
 }
 
@@ -178,7 +175,7 @@ export class ProjectRepository {
       .bind(id)
       .run();
 
-    return result.changes > 0;
+    return (result.meta?.changes || 0) > 0;
   }
 }
 
@@ -266,7 +263,7 @@ export class AudioFileRepository {
       .bind(id)
       .run();
 
-    return result.changes > 0;
+    return (result.meta?.changes || 0) > 0;
   }
 }
 
@@ -364,7 +361,7 @@ export class TranscriptionRepository {
       .bind(id)
       .run();
 
-    return result.changes > 0;
+    return (result.meta?.changes || 0) > 0;
   }
 }
 
@@ -417,6 +414,6 @@ export class ActivityLogRepository {
       .bind(userId, cutoffDate.toISOString())
       .run();
 
-    return result.changes;
+    return result.meta?.changes || 0;
   }
 }

@@ -19,99 +19,99 @@ const features = [
     icon: Mic,
     title: 'AI-Powered Transcription',
     description: 'Advanced speech recognition with 99% accuracy using Cloudflare Workers AI. Supports multiple languages and accents.',
-    color: 'text-primary-600 dark:text-primary-400',
-    bgColor: 'bg-primary-100 dark:bg-primary-900/30',
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-100',
   },
   {
     icon: FileText,
     title: 'Professional Rich Text Editor',
     description: 'Advanced editing tools with formatting, collaboration features, and real-time editing capabilities.',
-    color: 'text-blue-600 dark:text-blue-400',
-    bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+    color: 'text-indigo-600',
+    bgColor: 'bg-indigo-100',
   },
   {
     icon: Download,
     title: 'Multiple Export Formats',
     description: 'Export in PDF, DOCX, TXT, SRT, VTT formats with professional and standard quality options.',
-    color: 'text-green-600 dark:text-green-400',
-    bgColor: 'bg-green-100 dark:bg-green-900/30',
+    color: 'text-green-600',
+    bgColor: 'bg-green-100',
   },
   {
     icon: Users,
     title: 'Role-Based Access',
     description: 'Tailored experiences for students, professionals, copywriters, and video editors with specific tools.',
-    color: 'text-purple-600 dark:text-purple-400',
-    bgColor: 'bg-purple-100 dark:bg-purple-900/30',
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-100',
   },
   {
     icon: Shield,
     title: 'Enterprise Security',
     description: 'Bank-level security with encrypted storage, secure authentication, and compliance standards.',
-    color: 'text-red-600 dark:text-red-400',
-    bgColor: 'bg-red-100 dark:bg-red-900/30',
+    color: 'text-red-600',
+    bgColor: 'bg-red-100',
   },
   {
     icon: Zap,
     title: 'Lightning Fast',
     description: 'Powered by Cloudflare edge network for ultra-fast processing and global availability.',
-    color: 'text-yellow-600 dark:text-yellow-400',
-    bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-100',
   },
   {
     icon: Globe,
     title: 'Multi-Language Support',
     description: 'Transcribe audio in 50+ languages with automatic language detection and translation.',
-    color: 'text-indigo-600 dark:text-indigo-400',
-    bgColor: 'bg-indigo-100 dark:bg-indigo-900/30',
+    color: 'text-violet-600',
+    bgColor: 'bg-violet-100',
   },
   {
     icon: Search,
     title: 'Smart Search',
     description: 'AI-powered semantic search across all your transcriptions with instant results.',
-    color: 'text-pink-600 dark:text-pink-400',
-    bgColor: 'bg-pink-100 dark:bg-pink-900/30',
+    color: 'text-pink-600',
+    bgColor: 'bg-pink-100',
   },
   {
     icon: Clock,
     title: 'Time-Stamped Segments',
     description: 'Precise timestamps for each segment with speaker identification and confidence scores.',
-    color: 'text-teal-600 dark:text-teal-400',
-    bgColor: 'bg-teal-100 dark:bg-teal-900/30',
+    color: 'text-teal-600',
+    bgColor: 'bg-teal-100',
   },
   {
     icon: Palette,
     title: 'Customizable Interface',
     description: 'Personalize your workspace with themes, layouts, and productivity tools.',
-    color: 'text-orange-600 dark:text-orange-400',
-    bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-100',
   },
   {
     icon: Share2,
     title: 'Team Collaboration',
     description: 'Share projects, collaborate in real-time, and manage team permissions effortlessly.',
-    color: 'text-cyan-600 dark:text-cyan-400',
-    bgColor: 'bg-cyan-100 dark:bg-cyan-900/30',
+    color: 'text-cyan-600',
+    bgColor: 'bg-cyan-100',
   },
   {
     icon: BarChart3,
     title: 'Analytics & Insights',
     description: 'Track usage, performance metrics, and productivity insights with detailed analytics.',
-    color: 'text-emerald-600 dark:text-emerald-400',
-    bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-100',
   },
 ];
 
 export const Features: React.FC = () => {
   return (
-    <section className="py-20 bg-white dark:bg-gray-900">
+    <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+          <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
             Everything You Need for
             <span className="gradient-text"> Professional Transcription</span>
           </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Comprehensive tools and features designed to streamline your audio-to-text workflow
             and enhance productivity across all use cases.
           </p>

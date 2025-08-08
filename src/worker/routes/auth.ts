@@ -20,10 +20,10 @@ const resetPasswordSchema = z.object({
   email: z.string().email(),
 });
 
-const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
-  newPassword: z.string().min(8).max(128),
-});
+// const changePasswordSchema = z.object({
+//   currentPassword: z.string().min(1),
+//   newPassword: z.string().min(8).max(128),
+// });
 
 export function createAuthRoutes(
   jwtService: JWTService,
@@ -85,7 +85,7 @@ export function createAuthRoutes(
     } catch (error) {
       console.error('Registration error:', error);
       if (error instanceof z.ZodError) {
-        return c.json({ error: 'Invalid input data', details: error.errors }, 400);
+        return c.json({ error: 'Invalid input data', details: error.issues }, 400);
       }
       return c.json({ error: 'Registration failed' }, 500);
     }
@@ -135,7 +135,7 @@ export function createAuthRoutes(
     } catch (error) {
       console.error('Login error:', error);
       if (error instanceof z.ZodError) {
-        return c.json({ error: 'Invalid input data', details: error.errors }, 400);
+        return c.json({ error: 'Invalid input data', details: error.issues }, 400);
       }
       return c.json({ error: 'Login failed' }, 500);
     }
@@ -249,7 +249,7 @@ export function createAuthRoutes(
     } catch (error) {
       console.error('Password reset request error:', error);
       if (error instanceof z.ZodError) {
-        return c.json({ error: 'Invalid input data', details: error.errors }, 400);
+        return c.json({ error: 'Invalid input data', details: error.issues }, 400);
       }
       return c.json({ error: 'Password reset request failed' }, 500);
     }
