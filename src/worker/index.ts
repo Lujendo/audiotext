@@ -1,28 +1,31 @@
 import { Hono } from "hono";
+import { JWTService, SessionService } from "./auth/jwt";
+import { UserRepository } from "./db/repository";
+// import { createAuthRoutes } from "./routes/auth";
+import { createAuthMiddleware, corsMiddleware } from "./auth/middleware";
 
-const app = new Hono<{ Bindings: Env }>();
+type Variables = {
+  jwtService: JWTService;
+  sessionService: SessionService;
+  userRepo: UserRepository;
+  auth?: any;
+};
+
+const app = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 // CORS middleware
+app.use('*', corsMiddleware());
+
+// Initialize services
 app.use('*', async (c, next) => {
-  const origin = c.req.header('Origin');
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'https://audiotext.info-eac.workers.dev',
-  ];
+  // Initialize services and attach to context
+  const jwtService = new JWTService(c.env.JWT_SECRET);
+  const sessionService = new SessionService(c.env.SESSIONS);
+  const userRepo = new UserRepository(c.env.DB);
 
-  if (origin && allowedOrigins.includes(origin)) {
-    c.header('Access-Control-Allow-Origin', origin);
-  }
-
-  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cookie');
-  c.header('Access-Control-Allow-Credentials', 'true');
-  c.header('Access-Control-Max-Age', '86400');
-
-  if (c.req.method === 'OPTIONS') {
-    return new Response('', { status: 204 });
-  }
+  c.set('jwtService', jwtService);
+  c.set('sessionService', sessionService);
+  c.set('userRepo', userRepo);
 
   await next();
 });
@@ -31,24 +34,80 @@ app.use('*', async (c, next) => {
 app.get("/api/health", (c) => c.json({
   status: "ok",
   timestamp: new Date().toISOString(),
-  environment: c.env?.ENVIRONMENT || 'production',
-  message: "AudioText API is running"
+  environment: c.env.ENVIRONMENT,
+  message: "AudioText API is running",
+  services: {
+    database: !!c.env.DB,
+    sessions: !!c.env.SESSIONS,
+    cache: !!c.env.CACHE,
+    storage: !!c.env.AUDIO_BUCKET,
+    ai: !!c.env.AI,
+    vectorize: !!c.env.VECTORIZE_INDEX,
+    analytics: !!c.env.ANALYTICS
+  }
 }));
 
-// Simple API endpoint
-app.get('/api/info', (c) => {
+// Auth routes - create a sub-app with proper context
+const authApp = new Hono<{ Bindings: Env; Variables: Variables }>();
+authApp.use('*', async (_c, next) => {
+  // Services are already initialized in parent middleware
+  await next();
+});
+
+// Add auth routes to sub-app
+authApp.post('/register', async (c) => {
+  // const jwtService = c.get('jwtService') as JWTService;
+  // const sessionService = c.get('sessionService') as SessionService;
+  // const userRepo = c.get('userRepo') as UserRepository;
+
+  // Import the auth route logic here for now
+  return c.json({ message: 'Registration endpoint - implementation in progress' });
+});
+
+authApp.post('/login', async (c) => {
+  // const jwtService = c.get('jwtService') as JWTService;
+  // const sessionService = c.get('sessionService') as SessionService;
+  // const userRepo = c.get('userRepo') as UserRepository;
+
+  return c.json({ message: 'Login endpoint - implementation in progress' });
+});
+
+authApp.post('/logout', async (c) => {
+  // const sessionService = c.get('sessionService') as SessionService;
+  return c.json({ message: 'Logout endpoint - implementation in progress' });
+});
+
+authApp.get('/me', async (c) => {
+  return c.json({ message: 'User profile endpoint - implementation in progress' });
+});
+
+app.route('/api/auth', authApp);
+
+// Protected routes (require authentication)
+app.use('/api/protected/*', async (c, next) => {
+  const jwtService = c.get('jwtService') as JWTService;
+  const sessionService = c.get('sessionService') as SessionService;
+  const userRepo = c.get('userRepo') as UserRepository;
+
+  return createAuthMiddleware(jwtService, sessionService, userRepo)(c, next);
+});
+
+// Test protected route
+app.get("/api/protected/test", (c) => {
+  const auth = c.get('auth');
   return c.json({
-    name: 'AudioText API',
-    version: '1.0.0',
-    description: 'Professional Audio to Text Transcription Platform'
+    message: "This is a protected route",
+    user: auth?.user || 'No user'
   });
 });
 
-// Catch all for SPA routing
-app.get('*', (c) => {
+// Dashboard routes
+app.get("/api/protected/dashboard", (c) => {
+  const auth = c.get('auth');
   return c.json({
-    message: 'AudioText - Professional Audio to Text Transcription',
-    api: '/api/health'
+    message: "Dashboard data",
+    user: auth?.user,
+    dashboardType: auth?.user?.role || 'default'
   });
 });
 

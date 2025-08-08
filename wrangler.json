@@ -14,7 +14,45 @@
   },
   "vars": {
     "ENVIRONMENT": "production",
-    "JWT_SECRET": "temp-jwt-secret-key-for-demo",
+    "JWT_SECRET": "audiotext-jwt-secret-2024-secure-key",
     "CORS_ORIGIN": "https://audiotext.info-eac.workers.dev"
-  }
+  },
+  "kv_namespaces": [
+    {
+      "binding": "SESSIONS",
+      "id": "9ebdf7f6cb044053aa91eb033eb46ed2"
+    },
+    {
+      "binding": "CACHE",
+      "id": "f8a818ef62ac49829fec3d96cf35cea8"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "audiotext-db",
+      "database_id": "07f4e543-55ca-451e-a716-4d376b2c0ba8"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "AUDIO_BUCKET",
+      "bucket_name": "audiotext-files"
+    }
+  ],
+  "vectorize": [
+    {
+      "binding": "VECTORIZE_INDEX",
+      "index_name": "audiotext-search"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "audiotext-analytics"
+    }
+  ]
 }

@@ -26,19 +26,26 @@ const resetPasswordSchema = z.object({
 // });
 
 export function createAuthRoutes(
-  jwtService: JWTService,
-  sessionService: SessionService,
-  userRepo: UserRepository,
-  kv: KVNamespace
+  getJwtService: (c: any) => JWTService,
+  getSessionService: (c: any) => SessionService,
+  getUserRepo: (c: any) => UserRepository,
+  getKv: (c: any) => KVNamespace
 ) {
   const auth = new Hono<{ Bindings: Env }>();
 
   // Rate limiting for auth endpoints
-  auth.use('*', rateLimitMiddleware(kv, 10, 60000)); // 10 requests per minute
+  auth.use('*', async (c, next) => {
+    const kv = getKv(c);
+    return rateLimitMiddleware(kv, 10, 60000)(c, next);
+  });
 
   // Register
   auth.post('/register', async (c) => {
     try {
+      const jwtService = getJwtService(c);
+      const sessionService = getSessionService(c);
+      const userRepo = getUserRepo(c);
+
       const body = await c.req.json();
       const validatedData = registerSchema.parse(body);
 
@@ -94,6 +101,10 @@ export function createAuthRoutes(
   // Login
   auth.post('/login', async (c) => {
     try {
+      const jwtService = getJwtService(c);
+      const sessionService = getSessionService(c);
+      const userRepo = getUserRepo(c);
+
       const body = await c.req.json();
       const validatedData = loginSchema.parse(body);
 
@@ -144,8 +155,9 @@ export function createAuthRoutes(
   // Logout
   auth.post('/logout', async (c) => {
     try {
+      const sessionService = getSessionService(c);
       const sessionCookie = c.req.header('Cookie')?.match(/session=([^;]+)/)?.[1];
-      
+
       if (sessionCookie) {
         await sessionService.deleteSession(sessionCookie);
       }
@@ -174,6 +186,7 @@ export function createAuthRoutes(
       }
 
       const token = authHeader.substring(7);
+      const jwtService = getJwtService(c);
       const newToken = await jwtService.refreshToken(token);
 
       if (!newToken) {
@@ -193,6 +206,9 @@ export function createAuthRoutes(
   // Request password reset
   auth.post('/reset-password', async (c) => {
     try {
+      const userRepo = getUserRepo(c);
+      const kv = getKv(c);
+
       const body = await c.req.json();
       const validatedData = resetPasswordSchema.parse(body);
 

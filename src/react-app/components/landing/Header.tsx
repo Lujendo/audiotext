@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
+import { AuthModal } from '../auth/AuthModal';
 import { Menu, X, Mic, User } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const { isAuthenticated, user } = useAuth();
+  const navigate = useNavigate();
 
   const navigation = [
     { name: 'Features', href: '#features' },
@@ -11,6 +18,20 @@ export const Header: React.FC = () => {
     { name: 'About', href: '#about' },
     { name: 'Contact', href: '#contact' },
   ];
+
+  const handleSignIn = () => {
+    setAuthMode('login');
+    setAuthModalOpen(true);
+  };
+
+  const handleGetStarted = () => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      setAuthMode('register');
+      setAuthModalOpen(true);
+    }
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
@@ -43,13 +64,31 @@ export const Header: React.FC = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" size="sm">
-              <User className="w-4 h-4 mr-2" />
-              Sign In
-            </Button>
-            <Button size="sm">
-              Get Started
-            </Button>
+            {isAuthenticated ? (
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
+                    <span className="text-sm font-medium text-white">
+                      {user?.name?.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">{user?.name}</span>
+                </div>
+                <Button size="sm" onClick={() => navigate('/dashboard')}>
+                  Dashboard
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" onClick={handleSignIn}>
+                  <User className="w-4 h-4 mr-2" />
+                  Sign In
+                </Button>
+                <Button size="sm" onClick={handleGetStarted}>
+                  Get Started
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -81,21 +120,36 @@ export const Header: React.FC = () => {
                   {item.name}
                 </a>
               ))}
-              <div className="pt-4 pb-2 border-t border-gray-200 dark:border-gray-700">
+              <div className="pt-4 pb-2 border-t border-gray-200">
                 <div className="flex flex-col space-y-2">
-                  <Button variant="ghost" className="justify-start">
-                    <User className="w-4 h-4 mr-2" />
-                    Sign In
-                  </Button>
-                  <Button className="justify-start">
-                    Get Started
-                  </Button>
+                  {isAuthenticated ? (
+                    <Button className="justify-start" onClick={() => navigate('/dashboard')}>
+                      Dashboard
+                    </Button>
+                  ) : (
+                    <>
+                      <Button variant="ghost" className="justify-start" onClick={handleSignIn}>
+                        <User className="w-4 h-4 mr-2" />
+                        Sign In
+                      </Button>
+                      <Button className="justify-start" onClick={handleGetStarted}>
+                        Get Started
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode={authMode}
+      />
     </header>
   );
 };
