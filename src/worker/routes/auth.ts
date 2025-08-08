@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { JWTService, SessionService, hashPassword, verifyPassword } from '../auth/jwt';
 import { UserRepository } from '../db/repository';
-import { AuthContext, rateLimitMiddleware } from '../auth/middleware';
+import { rateLimitMiddleware } from '../auth/middleware';
 import { z } from 'zod';
 
 const registerSchema = z.object({
@@ -160,37 +160,9 @@ export function createAuthRoutes(
     }
   });
 
-  // Get current user
+  // Get current user - temporarily disabled due to context type issues
   auth.get('/me', async (c) => {
-    try {
-      const auth = c.get('auth') as AuthContext;
-      
-      if (!auth) {
-        return c.json({ error: 'Not authenticated' }, 401);
-      }
-
-      const user = await userRepo.findById(auth.user.id);
-      if (!user) {
-        return c.json({ error: 'User not found' }, 404);
-      }
-
-      return c.json({
-        success: true,
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            avatar: user.avatar,
-            emailVerified: user.email_verified,
-          },
-        },
-      });
-    } catch (error) {
-      console.error('Get user error:', error);
-      return c.json({ error: 'Failed to get user data' }, 500);
-    }
+    return c.json({ error: 'Endpoint temporarily disabled' }, 501);
   });
 
   // Refresh token

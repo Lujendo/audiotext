@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { JWTService, SessionService } from "./auth/jwt";
 import { UserRepository } from "./db/repository";
-import { createAuthRoutes } from "./routes/auth";
 import { createAuthMiddleware, corsMiddleware } from "./auth/middleware";
 
 type Variables = {
