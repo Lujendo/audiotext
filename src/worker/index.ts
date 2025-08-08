@@ -35,7 +35,8 @@ app.get("/api/health", (c) => c.json({
   status: "ok",
   timestamp: new Date().toISOString(),
   environment: c.env.ENVIRONMENT,
-  message: "AudioText API is running",
+  message: "AudioText API is running - v2.0",
+  version: "2.0.0",
   services: {
     database: !!c.env.DB,
     sessions: !!c.env.SESSIONS,
