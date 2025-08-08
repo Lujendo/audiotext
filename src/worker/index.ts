@@ -56,29 +56,178 @@ authApp.use('*', async (_c, next) => {
 
 // Add auth routes to sub-app
 authApp.post('/register', async (c) => {
-  // const jwtService = c.get('jwtService') as JWTService;
-  // const sessionService = c.get('sessionService') as SessionService;
-  // const userRepo = c.get('userRepo') as UserRepository;
+  try {
+    const jwtService = c.get('jwtService') as JWTService;
+    const sessionService = c.get('sessionService') as SessionService;
+    // const userRepo = c.get('userRepo') as UserRepository;
 
-  // Import the auth route logic here for now
-  return c.json({ message: 'Registration endpoint - implementation in progress' });
+    const body = await c.req.json();
+    const { email, name, password, role } = body;
+
+    if (!email || !name || !password || !role) {
+      return c.json({ success: false, error: 'All fields are required' }, 400);
+    }
+
+    // For now, create a demo user for registration
+    // In a real implementation, you'd hash the password and store in DB
+    const newUser = {
+      id: 'user-' + Date.now(),
+      email: email,
+      name: name,
+      role: role,
+      avatar: null,
+      email_verified: false,
+    };
+
+    // Generate JWT token
+    const token = await jwtService.generateToken(newUser.id, newUser.email, newUser.role);
+
+    // Create session
+    const sessionId = await sessionService.createSession(newUser.id, token);
+
+    // Set session cookie
+    c.header('Set-Cookie', `session=${sessionId}; HttpOnly; Secure; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}; Path=/`);
+
+    return c.json({
+      success: true,
+      data: {
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+          role: newUser.role,
+          avatar: newUser.avatar,
+          emailVerified: newUser.email_verified,
+        },
+        token,
+      },
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    return c.json({ success: false, error: 'Registration failed' }, 500);
+  }
 });
 
 authApp.post('/login', async (c) => {
-  // const jwtService = c.get('jwtService') as JWTService;
-  // const sessionService = c.get('sessionService') as SessionService;
-  // const userRepo = c.get('userRepo') as UserRepository;
+  try {
+    const jwtService = c.get('jwtService') as JWTService;
+    const sessionService = c.get('sessionService') as SessionService;
+    // const userRepo = c.get('userRepo') as UserRepository;
 
-  return c.json({ message: 'Login endpoint - implementation in progress' });
+    const body = await c.req.json();
+    const { email, password } = body;
+
+    if (!email || !password) {
+      return c.json({ success: false, error: 'Email and password are required' }, 400);
+    }
+
+    // For now, create a demo user if login is attempted
+    // In a real implementation, you'd verify the password
+    const demoUser = {
+      id: 'demo-user-' + Date.now(),
+      email: email,
+      name: email.split('@')[0],
+      role: 'professional' as const,
+      avatar: null,
+      email_verified: true,
+    };
+
+    // Generate JWT token
+    const token = await jwtService.generateToken(demoUser.id, demoUser.email, demoUser.role);
+
+    // Create session
+    const sessionId = await sessionService.createSession(demoUser.id, token);
+
+    // Set session cookie
+    c.header('Set-Cookie', `session=${sessionId}; HttpOnly; Secure; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}; Path=/`);
+
+    return c.json({
+      success: true,
+      data: {
+        user: {
+          id: demoUser.id,
+          email: demoUser.email,
+          name: demoUser.name,
+          role: demoUser.role,
+          avatar: demoUser.avatar,
+          emailVerified: demoUser.email_verified,
+        },
+        token,
+      },
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    return c.json({ success: false, error: 'Login failed' }, 500);
+  }
 });
 
 authApp.post('/logout', async (c) => {
-  // const sessionService = c.get('sessionService') as SessionService;
-  return c.json({ message: 'Logout endpoint - implementation in progress' });
+  try {
+    const sessionService = c.get('sessionService') as SessionService;
+    const sessionCookie = c.req.header('Cookie')?.match(/session=([^;]+)/)?.[1];
+
+    if (sessionCookie) {
+      await sessionService.deleteSession(sessionCookie);
+    }
+
+    // Clear session cookie
+    c.header('Set-Cookie', 'session=; HttpOnly; Secure; SameSite=Strict; Max-Age=0; Path=/');
+
+    return c.json({ success: true, message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    return c.json({ success: false, error: 'Logout failed' }, 500);
+  }
 });
 
 authApp.get('/me', async (c) => {
-  return c.json({ message: 'User profile endpoint - implementation in progress' });
+  try {
+    const jwtService = c.get('jwtService') as JWTService;
+    const sessionService = c.get('sessionService') as SessionService;
+    const userRepo = c.get('userRepo') as UserRepository;
+
+    // Get session from cookie
+    const sessionCookie = c.req.header('Cookie')?.match(/session=([^;]+)/)?.[1];
+
+    if (!sessionCookie) {
+      return c.json({ success: false, error: 'No session found' }, 401);
+    }
+
+    // Get session data
+    const sessionData = await sessionService.getSession(sessionCookie);
+    if (!sessionData) {
+      return c.json({ success: false, error: 'Invalid session' }, 401);
+    }
+
+    // Verify JWT token
+    const payload = await jwtService.verifyToken(sessionData.token);
+    if (!payload) {
+      return c.json({ success: false, error: 'Invalid token' }, 401);
+    }
+
+    // Get user data
+    const user = await userRepo.findById(payload.userId);
+    if (!user) {
+      return c.json({ success: false, error: 'User not found' }, 404);
+    }
+
+    return c.json({
+      success: true,
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          avatar: user.avatar,
+          emailVerified: user.email_verified,
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Auth check error:', error);
+    return c.json({ success: false, error: 'Authentication failed' }, 500);
+  }
 });
 
 app.route('/api/auth', authApp);
