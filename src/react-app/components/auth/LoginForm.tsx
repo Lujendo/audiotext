@@ -55,7 +55,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
           </div>
         )}
 
-        <div>
+        <div className="relative">
           <Input
             label="Email address"
             type="email"
@@ -66,7 +66,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
             placeholder="Enter your email"
             className="pl-10"
           />
-          <Mail className="absolute left-3 top-9 h-5 w-5 text-gray-400" />
+          <Mail className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
         </div>
 
         <div className="relative">
@@ -80,11 +80,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
             placeholder="Enter your password"
             className="pl-10 pr-10"
           />
-          <Lock className="absolute left-3 top-9 h-5 w-5 text-gray-400" />
+          <Lock className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-9 h-5 w-5 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-9 h-5 w-5 text-gray-400 hover:text-gray-600 focus:outline-none"
           >
             {showPassword ? <EyeOff /> : <Eye />}
           </button>

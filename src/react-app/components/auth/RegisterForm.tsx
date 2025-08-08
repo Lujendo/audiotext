@@ -90,7 +90,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
             placeholder="Enter your full name"
             className="pl-10"
           />
-          <User className="absolute left-3 top-9 h-5 w-5 text-gray-400" />
+          <User className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
         </div>
 
         <div className="relative">
@@ -104,7 +104,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
             placeholder="Enter your email"
             className="pl-10"
           />
-          <Mail className="absolute left-3 top-9 h-5 w-5 text-gray-400" />
+          <Mail className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
         </div>
 
         <div>
@@ -151,11 +151,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
             className="pl-10 pr-10"
             helperText="Must be at least 8 characters long"
           />
-          <Lock className="absolute left-3 top-9 h-5 w-5 text-gray-400" />
+          <Lock className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-9 h-5 w-5 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-9 h-5 w-5 text-gray-400 hover:text-gray-600 focus:outline-none"
           >
             {showPassword ? <EyeOff /> : <Eye />}
           </button>
@@ -172,11 +172,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
             placeholder="Confirm your password"
             className="pl-10 pr-10"
           />
-          <Lock className="absolute left-3 top-9 h-5 w-5 text-gray-400" />
+          <Lock className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-9 h-5 w-5 text-gray-400 hover:text-gray-600"
+            className="absolute right-3 top-9 h-5 w-5 text-gray-400 hover:text-gray-600 focus:outline-none"
           >
             {showConfirmPassword ? <EyeOff /> : <Eye />}
           </button>
