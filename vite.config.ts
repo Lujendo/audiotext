@@ -5,8 +5,7 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 export default defineConfig({
   plugins: [
     react(),
-    // Temporarily disable cloudflare plugin for local development
-    // cloudflare()
+    cloudflare()
   ],
   server: {
     proxy: {
