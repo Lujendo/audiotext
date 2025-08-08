@@ -5,7 +5,8 @@ import { cloudflare } from "@cloudflare/vite-plugin";
 export default defineConfig({
   plugins: [
     react(),
-    cloudflare()
+    // Only enable Cloudflare plugin in production or when explicitly requested
+    ...(process.env.NODE_ENV === 'production' || process.env.ENABLE_CLOUDFLARE === 'true' ? [cloudflare()] : [])
   ],
   server: {
     proxy: {
