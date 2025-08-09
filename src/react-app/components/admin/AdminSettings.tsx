@@ -101,6 +101,15 @@ export const AdminSettings: React.FC = () => {
     active: true,
     metadata: {} as Record<string, string>
   });
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [selectedProductForPrice, setSelectedProductForPrice] = useState<any>(null);
+  const [priceForm, setPriceForm] = useState({
+    unitAmount: '',
+    currency: 'usd',
+    recurring: false,
+    interval: 'month' as 'month' | 'year',
+    intervalCount: 1
+  });
 
   const roles = [
     { value: 'all', label: 'All Roles' },
@@ -195,10 +204,35 @@ export const AdminSettings: React.FC = () => {
 
   const fetchStripeProducts = async () => {
     try {
-      const response = await fetch('/api/stripe/products');
+      const response = await fetch('/api/stripe/products', {
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
-        setStripeProducts(data.products || []);
+        const products = data.products || [];
+
+        // Fetch prices for each product
+        const productsWithPrices = await Promise.all(
+          products.map(async (product: any) => {
+            try {
+              const pricesResponse = await fetch(`/api/stripe/prices?product=${product.id}`, {
+                credentials: 'include'
+              });
+              if (pricesResponse.ok) {
+                const pricesData = await pricesResponse.json();
+                return { ...product, prices: pricesData.prices || [] };
+              }
+              return { ...product, prices: [] };
+            } catch (error) {
+              console.error(`Failed to fetch prices for product ${product.id}:`, error);
+              return { ...product, prices: [] };
+            }
+          })
+        );
+
+        setStripeProducts(productsWithPrices);
+      } else {
+        console.error('Failed to fetch Stripe products:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Failed to fetch Stripe products:', error);
@@ -310,6 +344,75 @@ export const AdminSettings: React.FC = () => {
     } catch (error) {
       console.error('Failed to save product:', error);
       alert(`Failed to ${editingProduct ? 'update' : 'create'} product`);
+    }
+  };
+
+  const openPriceModal = (product: any) => {
+    setSelectedProductForPrice(product);
+    setPriceForm({
+      unitAmount: '',
+      currency: 'usd',
+      recurring: false,
+      interval: 'month',
+      intervalCount: 1
+    });
+    setShowPriceModal(true);
+  };
+
+  const closePriceModal = () => {
+    setShowPriceModal(false);
+    setSelectedProductForPrice(null);
+    setPriceForm({
+      unitAmount: '',
+      currency: 'usd',
+      recurring: false,
+      interval: 'month',
+      intervalCount: 1
+    });
+  };
+
+  const handlePriceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedProductForPrice) return;
+
+    try {
+      const unitAmountCents = Math.round(parseFloat(priceForm.unitAmount) * 100);
+
+      if (isNaN(unitAmountCents) || unitAmountCents <= 0) {
+        alert('Please enter a valid price amount');
+        return;
+      }
+
+      const priceData = {
+        productId: selectedProductForPrice.id,
+        unitAmount: unitAmountCents,
+        currency: priceForm.currency,
+        recurring: priceForm.recurring ? {
+          interval: priceForm.interval,
+          interval_count: priceForm.intervalCount
+        } : undefined
+      };
+
+      const response = await fetch('/api/stripe/prices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(priceData)
+      });
+
+      if (response.ok) {
+        fetchStripeProducts();
+        closePriceModal();
+        alert('Price created successfully!');
+      } else {
+        alert('Failed to create price');
+      }
+    } catch (error) {
+      console.error('Failed to create price:', error);
+      alert('Failed to create price');
     }
   };
 
@@ -732,6 +835,48 @@ export const AdminSettings: React.FC = () => {
                       )}
                     </div>
 
+                    {/* Prices Section */}
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-gray-700 text-sm">Prices:</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openPriceModal(product)}
+                          className="text-blue-600 hover:text-blue-700 text-xs"
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          Add Price
+                        </Button>
+                      </div>
+                      {product.prices && product.prices.length > 0 ? (
+                        <div className="space-y-2">
+                          {product.prices.map((price: any) => (
+                            <div key={price.id} className="bg-gray-50 rounded-md p-2">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="font-medium text-gray-900">
+                                    ${(price.unit_amount / 100).toFixed(2)} {price.currency.toUpperCase()}
+                                  </span>
+                                  {price.recurring && (
+                                    <span className="text-xs text-gray-600 ml-2">
+                                      / {price.recurring.interval_count > 1 ? `${price.recurring.interval_count} ` : ''}
+                                      {price.recurring.interval}{price.recurring.interval_count > 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-xs text-gray-500 font-mono">
+                                  {price.id}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-gray-500 italic">No prices configured</div>
+                      )}
+                    </div>
+
                     {/* Product Actions */}
                     <div className="flex items-center justify-between pt-3 border-t border-gray-200">
                       <div className="flex items-center space-x-2">
@@ -958,6 +1103,109 @@ export const AdminSettings: React.FC = () => {
                   variant="primary"
                 >
                   {editingProduct ? 'Update Product' : 'Create Product'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Price Modal */}
+      {showPriceModal && selectedProductForPrice && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Add Price for {selectedProductForPrice.name}
+              </h3>
+            </div>
+
+            <form onSubmit={handlePriceSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Price Amount (USD)
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={priceForm.unitAmount}
+                  onChange={(e) => setPriceForm(prev => ({ ...prev, unitAmount: e.target.value }))}
+                  placeholder="29.99"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Currency
+                </label>
+                <select
+                  value={priceForm.currency}
+                  onChange={(e) => setPriceForm(prev => ({ ...prev, currency: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="usd">USD</option>
+                  <option value="eur">EUR</option>
+                  <option value="gbp">GBP</option>
+                </select>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="recurring"
+                  checked={priceForm.recurring}
+                  onChange={(e) => setPriceForm(prev => ({ ...prev, recurring: e.target.checked }))}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="recurring" className="ml-2 block text-sm text-gray-900">
+                  Recurring Subscription
+                </label>
+              </div>
+
+              {priceForm.recurring && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Interval
+                    </label>
+                    <select
+                      value={priceForm.interval}
+                      onChange={(e) => setPriceForm(prev => ({ ...prev, interval: e.target.value as 'month' | 'year' }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="month">Monthly</option>
+                      <option value="year">Yearly</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Count
+                    </label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={priceForm.intervalCount}
+                      onChange={(e) => setPriceForm(prev => ({ ...prev, intervalCount: parseInt(e.target.value) || 1 }))}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closePriceModal}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                >
+                  Create Price
                 </Button>
               </div>
             </form>

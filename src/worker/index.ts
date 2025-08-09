@@ -924,4 +924,85 @@ app.post("/api/stripe/sync-product/:id", async (c) => {
   }
 });
 
+// Stripe Price Management Endpoints
+
+// Get prices for a product
+app.get("/api/stripe/prices", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware manually
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult; // Return error response if authentication failed
+  }
+
+  const auth = c.get('auth');
+
+  // Check if user is admin
+  if (auth?.user?.role !== 'admin') {
+    return c.json({ error: 'Unauthorized - Admin access required' }, 403);
+  }
+
+  try {
+    const productId = c.req.query('product');
+    const stripe = new StripeService(c.env.STRIPE_SECRET_KEY);
+
+    const pricesData = await stripe.listPrices(productId);
+
+    return c.json({ prices: pricesData.data });
+  } catch (error) {
+    console.error('Prices fetch error:', error);
+    return c.json({ error: 'Failed to fetch prices' }, 500);
+  }
+});
+
+// Create new price
+app.post("/api/stripe/prices", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware manually
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult; // Return error response if authentication failed
+  }
+
+  const auth = c.get('auth');
+
+  // Check if user is admin
+  if (auth?.user?.role !== 'admin') {
+    return c.json({ error: 'Unauthorized - Admin access required' }, 403);
+  }
+
+  try {
+    const { productId, unitAmount, currency, recurring } = await c.req.json();
+
+    if (!productId || !unitAmount) {
+      return c.json({ error: 'Product ID and unit amount are required' }, 400);
+    }
+
+    const stripe = new StripeService(c.env.STRIPE_SECRET_KEY);
+
+    const price = await stripe.createPrice(
+      productId,
+      unitAmount,
+      currency || 'usd',
+      recurring,
+      {}
+    );
+
+    return c.json({ price });
+  } catch (error) {
+    console.error('Price creation error:', error);
+    return c.json({ error: 'Failed to create price' }, 500);
+  }
+});
+
 export default app;
