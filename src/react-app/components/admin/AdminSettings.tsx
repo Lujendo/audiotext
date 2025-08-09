@@ -283,14 +283,29 @@ export const AdminSettings: React.FC = () => {
     }
   };
 
-  const openProductModal = (product?: any) => {
+  const openProductModal = async (product?: any) => {
     if (product) {
-      setEditingProduct(product);
+      // Fetch fresh prices for the product
+      let productWithPrices = { ...product };
+      try {
+        const pricesResponse = await fetch(`/api/stripe/prices?product=${product.id}`, {
+          credentials: 'include'
+        });
+        if (pricesResponse.ok) {
+          const pricesData = await pricesResponse.json();
+          productWithPrices.prices = pricesData.prices || [];
+        }
+      } catch (error) {
+        console.error(`Failed to fetch prices for product ${product.id}:`, error);
+        productWithPrices.prices = product.prices || [];
+      }
+
+      setEditingProduct(productWithPrices);
       setProductForm({
-        name: product.name || '',
-        description: product.description || '',
-        active: product.active !== false,
-        metadata: product.metadata || {}
+        name: productWithPrices.name || '',
+        description: productWithPrices.description || '',
+        active: productWithPrices.active !== false,
+        metadata: productWithPrices.metadata || {}
       });
     } else {
       setEditingProduct(null);
@@ -405,6 +420,22 @@ export const AdminSettings: React.FC = () => {
 
       if (response.ok) {
         fetchStripeProducts();
+
+        // If we're editing a product and the price was created for that product, refresh its prices
+        if (editingProduct && editingProduct.id === selectedProductForPrice.id) {
+          try {
+            const pricesResponse = await fetch(`/api/stripe/prices?product=${editingProduct.id}`, {
+              credentials: 'include'
+            });
+            if (pricesResponse.ok) {
+              const pricesData = await pricesResponse.json();
+              setEditingProduct((prev: any) => prev ? { ...prev, prices: pricesData.prices || [] } : null);
+            }
+          } catch (error) {
+            console.error('Failed to refresh product prices:', error);
+          }
+        }
+
         closePriceModal();
         alert('Price created successfully!');
       } else {
@@ -1043,7 +1074,7 @@ export const AdminSettings: React.FC = () => {
       {/* Product Modal */}
       {showProductModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">
                 {editingProduct ? 'Edit Product' : 'Create Product'}
@@ -1076,6 +1107,59 @@ export const AdminSettings: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
+
+              {/* Prices Section - Only show when editing existing product */}
+              {editingProduct && editingProduct.prices && (
+                <div className="border-t border-gray-200 pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Current Prices
+                    </label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedProductForPrice(editingProduct);
+                        setShowPriceModal(true);
+                      }}
+                      className="text-blue-600 hover:text-blue-700 text-xs"
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Price
+                    </Button>
+                  </div>
+
+                  {editingProduct.prices.length > 0 ? (
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {editingProduct.prices.map((price: any) => (
+                        <div key={price.id} className="bg-gray-50 rounded-md p-2 text-sm">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-medium text-gray-900">
+                                ${(price.unit_amount / 100).toFixed(2)} {price.currency.toUpperCase()}
+                              </span>
+                              {price.recurring && (
+                                <span className="text-xs text-gray-600 ml-2">
+                                  / {price.recurring.interval_count > 1 ? `${price.recurring.interval_count} ` : ''}
+                                  {price.recurring.interval}{price.recurring.interval_count > 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-gray-500 font-mono">
+                              {price.id.substring(0, 12)}...
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500 italic bg-gray-50 rounded-md p-3 text-center">
+                      No prices configured for this product
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex items-center">
                 <input
