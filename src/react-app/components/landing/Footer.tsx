@@ -149,13 +149,13 @@ export const Footer: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center space-x-6 mb-4 md:mb-0">
               <p className="text-gray-400 text-sm">
-                © 2024 AudioText. All rights reserved.
+                © 2025 AudioText. All rights reserved.
               </p>
               <div className="flex items-center space-x-2">
                 <span className="text-gray-400 text-sm">Powered by</span>
                 <div className="flex items-center space-x-1">
                   <div className="w-4 h-4 bg-orange-500 rounded"></div>
-                  <span className="text-sm font-medium text-orange-400">Cloudflare</span>
+                  <span className="text-sm font-medium text-orange-400">Luji Music Publishing</span>
                 </div>
               </div>
             </div>

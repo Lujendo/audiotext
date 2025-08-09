@@ -23,9 +23,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[60] w-full max-w-md px-4">
-      {/* Modal - Clean design without backdrop */}
-      <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200 max-h-[80vh] overflow-y-auto">
+    <>
+      {/* Backdrop - covers everything except header */}
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity z-[40]"
+        style={{ top: '80px' }} // Start below header (header height + some margin)
+        onClick={onClose}
+      />
+
+      {/* Modal container */}
+      <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[60] w-full max-w-md px-4">
+        {/* Modal content */}
+        <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200 max-h-[80vh] overflow-y-auto">
           {/* Close button */}
           <button
             onClick={onClose}
@@ -49,6 +58,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             )}
           </div>
         </div>
-    </div>
+      </div>
+    </>
   );
 };
