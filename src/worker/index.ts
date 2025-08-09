@@ -97,8 +97,9 @@ authApp.post('/register', async (c) => {
       password_hash: passwordHash,
       role: role as any,
       email_verified: false,
-      subscription_status: plan === 'free' ? 'trialing' : 'free',
-      plan_type: plan || 'free'
+      subscription_status: plan === 'free' ? 'free' : 'free', // All start as free, upgrade later
+      plan_type: plan || 'free',
+      is_active: true
     });
 
     // Generate JWT token

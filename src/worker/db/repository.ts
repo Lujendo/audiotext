@@ -28,15 +28,24 @@ export class UserRepository {
       ...userData,
       id,
       email_verified: userData.email_verified || false,
-      is_active: true,
+      is_active: userData.is_active !== undefined ? userData.is_active : true,
+      stripe_customer_id: userData.stripe_customer_id || undefined,
+      subscription_status: userData.subscription_status || 'free',
+      subscription_id: userData.subscription_id || undefined,
+      plan_type: userData.plan_type || 'free',
+      last_login: undefined, // Will be set on first login
       created_at: now,
       updated_at: now,
     };
 
     await this.db
       .prepare(`
-        INSERT INTO users (id, email, name, password_hash, role, avatar, email_verified, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO users (
+          id, email, name, password_hash, role, avatar, email_verified,
+          created_at, updated_at, stripe_customer_id, subscription_status,
+          subscription_id, plan_type, last_login, is_active
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `)
       .bind(
         user.id,
@@ -47,7 +56,13 @@ export class UserRepository {
         user.avatar,
         user.email_verified,
         user.created_at,
-        user.updated_at
+        user.updated_at,
+        user.stripe_customer_id || null,
+        user.subscription_status || 'free',
+        user.subscription_id || null,
+        user.plan_type || 'free',
+        user.last_login || null,
+        user.is_active
       )
       .run();
 

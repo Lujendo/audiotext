@@ -137,8 +137,13 @@ export interface DatabaseExport {
 }
 
 // Utility types for creating new records
-export type CreateUser = Omit<DatabaseUser, 'id' | 'created_at' | 'updated_at' | 'last_login' | 'is_active'> & {
+export type CreateUser = Omit<DatabaseUser, 'id' | 'created_at' | 'updated_at' | 'last_login' | 'is_active' | 'stripe_customer_id' | 'subscription_status' | 'subscription_id' | 'plan_type'> & {
   email_verified?: boolean;
+  is_active?: boolean;
+  stripe_customer_id?: string;
+  subscription_status?: 'active' | 'canceled' | 'incomplete' | 'past_due' | 'trialing' | 'free';
+  subscription_id?: string;
+  plan_type?: 'free' | 'pro' | 'enterprise';
 };
 export type CreateProject = Omit<DatabaseProject, 'id' | 'created_at' | 'updated_at' | 'last_accessed_at'>;
 export type CreateAudioFile = Omit<DatabaseAudioFile, 'id' | 'created_at' | 'updated_at'>;
