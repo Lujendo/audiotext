@@ -143,9 +143,10 @@ export class UserRepository {
   }
 
   async updateLastLogin(id: string): Promise<boolean> {
+    const now = getCurrentTimestamp();
     const result = await this.db
-      .prepare('UPDATE users SET updated_at = ? WHERE id = ?')
-      .bind(getCurrentTimestamp(), id)
+      .prepare('UPDATE users SET last_login = ?, updated_at = ? WHERE id = ?')
+      .bind(now, now, id)
       .run();
 
     return (result.meta?.changes || 0) > 0;

@@ -65,7 +65,7 @@ authApp.post('/register', async (c) => {
   try {
 
     const body = await c.req.json();
-    const { email, name, password, role } = body;
+    const { email, name, password, role, plan } = body;
 
     if (!email || !name || !password || !role) {
       return c.json({ success: false, error: 'All fields are required' }, 400);
@@ -89,9 +89,6 @@ authApp.post('/register', async (c) => {
 
     // Hash the password
     const passwordHash = await PasswordService.hashPassword(password);
-
-    // Get plan from request
-    const { plan } = await c.req.json();
 
     // Create user in database
     const newUser = await userRepo.create({
