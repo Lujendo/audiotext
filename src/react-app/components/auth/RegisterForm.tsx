@@ -11,10 +11,12 @@ interface RegisterFormProps {
 }
 
 const roleOptions = [
+  { value: 'subscriber' as UserRole, label: 'Subscriber', icon: '👤', description: 'Premium features and priority support' },
   { value: 'student' as UserRole, label: 'Student', icon: '🎓', description: 'For academic research and learning' },
   { value: 'professional' as UserRole, label: 'Professional', icon: '💼', description: 'For business and professional use' },
   { value: 'copywriter' as UserRole, label: 'Copywriter', icon: '✍️', description: 'For content creation and writing' },
   { value: 'video_editor' as UserRole, label: 'Video Editor', icon: '🎬', description: 'For video production and editing' },
+  { value: 'admin' as UserRole, label: 'Admin', icon: '🛡️', description: 'System administration and management' },
 ];
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin }) => {
@@ -111,7 +113,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
           <label className="block text-sm font-medium text-gray-700 mb-2">
             I am a...
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {roleOptions.map((option) => (
               <label
                 key={option.value}

@@ -10,7 +10,7 @@ export interface User {
   preferences: UserPreferences
 }
 
-export type UserRole = 'student' | 'professional' | 'copywriter' | 'video_editor' | 'admin'
+export type UserRole = 'student' | 'professional' | 'copywriter' | 'video_editor' | 'admin' | 'subscriber'
 
 export interface UserPreferences {
   theme: 'light' | 'dark' | 'system'

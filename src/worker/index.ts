@@ -69,15 +69,24 @@ authApp.post('/register', async (c) => {
       return c.json({ success: false, error: 'All fields are required' }, 400);
     }
 
-    // For now, create a demo user for registration
+    // Create demo user with specific IDs for testing
     // In a real implementation, you'd hash the password and store in DB
+    let userId = 'user-' + Date.now();
+
+    // Create specific test users for admin and subscriber roles
+    if (email === 'admin@audiotext.com') {
+      userId = 'admin-user-001';
+    } else if (email === 'subscriber@audiotext.com') {
+      userId = 'subscriber-user-001';
+    }
+
     const newUser = {
-      id: 'user-' + Date.now(),
+      id: userId,
       email: email,
       name: name,
       role: role,
       avatar: null,
-      email_verified: false,
+      email_verified: role === 'admin' || role === 'subscriber', // Auto-verify admin and subscriber
     };
 
     // Generate JWT token

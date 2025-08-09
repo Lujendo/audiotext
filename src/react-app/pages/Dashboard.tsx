@@ -5,6 +5,8 @@ import { StudentDashboard } from '../components/dashboard/StudentDashboard';
 import { ProfessionalDashboard } from '../components/dashboard/ProfessionalDashboard';
 import { CopywriterDashboard } from '../components/dashboard/CopywriterDashboard';
 import { VideoEditorDashboard } from '../components/dashboard/VideoEditorDashboard';
+import { AdminDashboard } from '../components/dashboard/AdminDashboard';
+import { SubscriberDashboard } from '../components/dashboard/SubscriberDashboard';
 
 export const Dashboard: React.FC = () => {
   const { user, loading } = useAuth();
@@ -30,6 +32,10 @@ export const Dashboard: React.FC = () => {
 
   const renderDashboardContent = () => {
     switch (user.role) {
+      case 'admin':
+        return <AdminDashboard />;
+      case 'subscriber':
+        return <SubscriberDashboard />;
       case 'student':
         return <StudentDashboard />;
       case 'professional':
