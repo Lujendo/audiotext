@@ -10,6 +10,40 @@ export interface DatabaseUser {
   updated_at: string;
   last_login?: string;
   is_active: boolean;
+  stripe_customer_id?: string;
+  subscription_status?: 'active' | 'canceled' | 'incomplete' | 'past_due' | 'trialing' | 'free';
+  subscription_id?: string;
+  plan_type?: 'free' | 'pro' | 'enterprise';
+}
+
+export interface DatabaseSubscription {
+  id: string;
+  user_id: string;
+  stripe_subscription_id: string;
+  stripe_customer_id: string;
+  stripe_price_id: string;
+  status: 'active' | 'canceled' | 'incomplete' | 'past_due' | 'trialing';
+  current_period_start: string;
+  current_period_end: string;
+  plan_type: 'free' | 'pro' | 'enterprise';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DatabaseProduct {
+  id: string;
+  stripe_product_id: string;
+  stripe_price_id: string;
+  name: string;
+  description: string;
+  price_amount: number;
+  price_currency: string;
+  billing_interval: 'month' | 'year';
+  plan_type: 'free' | 'pro' | 'enterprise';
+  features: string; // JSON string
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface DatabaseUserPreferences {
@@ -28,23 +62,7 @@ export interface DatabaseUserPreferences {
   updated_at: string;
 }
 
-export interface DatabaseSubscription {
-  id: string;
-  user_id: string;
-  plan: 'free' | 'basic' | 'pro' | 'enterprise';
-  status: 'active' | 'canceled' | 'past_due' | 'trialing';
-  current_period_start: string;
-  current_period_end: string;
-  cancel_at_period_end: boolean;
-  usage_transcription_minutes: number;
-  usage_storage_used: number;
-  usage_exports_count: number;
-  limits_transcription_minutes: number;
-  limits_storage_limit: number;
-  limits_exports_per_month: number;
-  created_at: string;
-  updated_at: string;
-}
+
 
 export interface DatabaseProject {
   id: string;

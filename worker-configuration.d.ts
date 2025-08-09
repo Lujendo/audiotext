@@ -7,6 +7,8 @@ declare namespace Cloudflare {
 		ENVIRONMENT: string;
 		JWT_SECRET: string;
 		CORS_ORIGIN: string;
+		STRIPE_SECRET_KEY: string;
+		STRIPE_WEBHOOK_SECRET: string;
 
 		// KV Namespaces
 		SESSIONS: KVNamespace;

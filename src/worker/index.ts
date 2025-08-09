@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { JWTService, SessionService } from "./auth/jwt";
 import { UserRepository } from "./db/repository";
 import { PasswordService } from "./services/passwordService";
+import { StripeService } from "./services/stripeService";
 // import { createAuthRoutes } from "./routes/auth";
 import { createAuthMiddleware, corsMiddleware } from "./auth/middleware";
 
@@ -9,6 +10,7 @@ type Variables = {
   jwtService: JWTService;
   sessionService: SessionService;
   userRepo: UserRepository;
+  stripeService: StripeService;
   auth?: any;
 };
 
@@ -23,10 +25,12 @@ app.use('*', async (c, next) => {
   const jwtService = new JWTService(c.env.JWT_SECRET);
   const sessionService = new SessionService(c.env.SESSIONS);
   const userRepo = new UserRepository(c.env.DB);
+  const stripeService = new StripeService(c.env.STRIPE_SECRET_KEY);
 
   c.set('jwtService', jwtService);
   c.set('sessionService', sessionService);
   c.set('userRepo', userRepo);
+  c.set('stripeService', stripeService);
 
   await next();
 });
@@ -86,13 +90,18 @@ authApp.post('/register', async (c) => {
     // Hash the password
     const passwordHash = await PasswordService.hashPassword(password);
 
+    // Get plan from request
+    const { plan } = await c.req.json();
+
     // Create user in database
     const newUser = await userRepo.create({
       email: email,
       name: name,
       password_hash: passwordHash,
       role: role as any,
-      email_verified: false
+      email_verified: false,
+      subscription_status: plan === 'free' ? 'trialing' : 'free',
+      plan_type: plan || 'free'
     });
 
     // Generate JWT token
@@ -503,6 +512,242 @@ app.post("/api/admin/init-dev-users", async (c) => {
   } catch (error) {
     console.error('Dev users init error:', error);
     return c.json({ error: 'Failed to initialize development users' }, 500);
+  }
+});
+
+// Stripe API endpoints
+app.get("/api/stripe/products", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware manually
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult; // Return error response if authentication failed
+  }
+
+  const auth = c.get('auth');
+
+  // Check if user is admin
+  if (auth?.user?.role !== 'admin') {
+    return c.json({ error: 'Unauthorized - Admin access required' }, 403);
+  }
+
+  try {
+    const stripeService = c.get('stripeService');
+    const products = await stripeService.listProducts();
+    const prices = await stripeService.listPrices();
+
+    return c.json({
+      success: true,
+      products: products.data,
+      prices: prices.data
+    });
+  } catch (error) {
+    console.error('Stripe products fetch error:', error);
+    return c.json({ error: 'Failed to fetch products' }, 500);
+  }
+});
+
+app.post("/api/stripe/sync-products", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware manually
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult; // Return error response if authentication failed
+  }
+
+  const auth = c.get('auth');
+
+  // Check if user is admin
+  if (auth?.user?.role !== 'admin') {
+    return c.json({ error: 'Unauthorized - Admin access required' }, 403);
+  }
+
+  try {
+    const stripeService = c.get('stripeService');
+
+    // Create or update products in Stripe
+    const products = [
+      {
+        name: 'AudioText Pro',
+        description: 'For professionals and content creators',
+        price: 2900, // $29.00 in cents
+        interval: 'month' as const,
+        planType: 'pro'
+      },
+      {
+        name: 'AudioText Enterprise',
+        description: 'For teams and large organizations',
+        price: 9900, // $99.00 in cents
+        interval: 'month' as const,
+        planType: 'enterprise'
+      }
+    ];
+
+    const results = [];
+
+    for (const productData of products) {
+      // Create product in Stripe
+      const product = await stripeService.createProduct(
+        productData.name,
+        productData.description,
+        { plan_type: productData.planType }
+      );
+
+      // Create price for the product
+      const price = await stripeService.createPrice(
+        product.id,
+        productData.price,
+        'usd',
+        { interval: productData.interval }
+      );
+
+      results.push({
+        product,
+        price,
+        planType: productData.planType
+      });
+    }
+
+    return c.json({
+      success: true,
+      message: 'Products synced successfully',
+      results
+    });
+  } catch (error) {
+    console.error('Stripe sync error:', error);
+    return c.json({ error: 'Failed to sync products' }, 500);
+  }
+});
+
+app.post("/api/stripe/create-checkout", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware manually
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult; // Return error response if authentication failed
+  }
+
+  const auth = c.get('auth');
+  const { priceId, planType } = await c.req.json();
+
+  try {
+    const stripeService = c.get('stripeService');
+    const user = auth?.user;
+
+    if (!user) {
+      return c.json({ error: 'User not found' }, 404);
+    }
+
+    // Create or get Stripe customer
+    let customerId = user.stripe_customer_id;
+    if (!customerId) {
+      const customer = await stripeService.createCustomer(
+        user.email,
+        user.name,
+        { user_id: user.id }
+      );
+      customerId = customer.id;
+
+      // Update user with Stripe customer ID
+      await userRepo.update(user.id, { stripe_customer_id: customerId });
+    }
+
+    // Create checkout session
+    const session = await stripeService.createCheckoutSession(
+      customerId,
+      priceId,
+      `${c.req.url.split('/api')[0]}/dashboard?success=true`,
+      `${c.req.url.split('/api')[0]}/register?canceled=true`,
+      planType === 'pro' ? 7 : undefined // 7-day trial for pro plan
+    );
+
+    return c.json({
+      success: true,
+      checkoutUrl: session.url
+    });
+  } catch (error) {
+    console.error('Checkout creation error:', error);
+    return c.json({ error: 'Failed to create checkout session' }, 500);
+  }
+});
+
+// Stripe webhook endpoint
+app.post("/api/stripe/webhook", async (c) => {
+  try {
+    const body = await c.req.text();
+    const signature = c.req.header('stripe-signature');
+    const webhookSecret = c.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!signature || !webhookSecret) {
+      return c.json({ error: 'Missing signature or webhook secret' }, 400);
+    }
+
+    // Verify webhook signature
+    const isValid = StripeService.verifyWebhookSignature(signature, webhookSecret);
+    if (!isValid) {
+      return c.json({ error: 'Invalid signature' }, 400);
+    }
+
+    const event = JSON.parse(body);
+    const userRepo = c.get('userRepo');
+
+    switch (event.type) {
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated':
+        const subscription = event.data.object;
+        const customerId = subscription.customer;
+
+        // Find user by Stripe customer ID
+        const users = await userRepo.searchUsers(customerId);
+        const user = users.find(u => u.stripe_customer_id === customerId);
+
+        if (user) {
+          await userRepo.update(user.id, {
+            subscription_status: subscription.status,
+            subscription_id: subscription.id,
+            plan_type: subscription.metadata?.plan_type || 'pro'
+          });
+        }
+        break;
+
+      case 'customer.subscription.deleted':
+        const deletedSubscription = event.data.object;
+        const deletedCustomerId = deletedSubscription.customer;
+
+        const deletedUsers = await userRepo.searchUsers(deletedCustomerId);
+        const deletedUser = deletedUsers.find(u => u.stripe_customer_id === deletedCustomerId);
+
+        if (deletedUser) {
+          await userRepo.update(deletedUser.id, {
+            subscription_status: 'canceled',
+            plan_type: 'free'
+          });
+        }
+        break;
+
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
+
+    return c.json({ received: true });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    return c.json({ error: 'Webhook processing failed' }, 500);
   }
 });
 

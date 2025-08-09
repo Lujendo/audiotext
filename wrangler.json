@@ -15,7 +15,9 @@
   "vars": {
     "ENVIRONMENT": "production",
     "JWT_SECRET": "audiotext-jwt-secret-2024-secure-key",
-    "CORS_ORIGIN": "https://audiotext.info-eac.workers.dev"
+    "CORS_ORIGIN": "https://audiotext.info-eac.workers.dev",
+    "STRIPE_SECRET_KEY": "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",
+    "STRIPE_WEBHOOK_SECRET": "whsec_gPF1OWEQsshIknAPqlKWfalDttbOkviL"
   },
   "kv_namespaces": [
     {

@@ -40,6 +40,9 @@ export const AdminSettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [activeSection, setActiveSection] = useState<'users' | 'products'>('users');
+  const [stripeProducts, setStripeProducts] = useState<any[]>([]);
+  const [syncingProducts, setSyncingProducts] = useState(false);
 
   const roles = [
     { value: 'all', label: 'All Roles' },
@@ -54,7 +57,10 @@ export const AdminSettings: React.FC = () => {
   useEffect(() => {
     fetchUsers();
     fetchUserStats();
-  }, [selectedRole, searchQuery]);
+    if (activeSection === 'products') {
+      fetchStripeProducts();
+    }
+  }, [selectedRole, searchQuery, activeSection]);
 
   const fetchUsers = async () => {
     try {
@@ -87,12 +93,45 @@ export const AdminSettings: React.FC = () => {
     }
   };
 
+  const fetchStripeProducts = async () => {
+    try {
+      const response = await fetch('/api/stripe/products');
+      if (response.ok) {
+        const data = await response.json();
+        setStripeProducts(data.products || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch Stripe products:', error);
+    }
+  };
+
+  const syncStripeProducts = async () => {
+    try {
+      setSyncingProducts(true);
+      const response = await fetch('/api/stripe/sync-products', {
+        method: 'POST',
+      });
+
+      if (response.ok) {
+        fetchStripeProducts();
+        alert('Products synced successfully!');
+      } else {
+        alert('Failed to sync products');
+      }
+    } catch (error) {
+      console.error('Failed to sync products:', error);
+      alert('Failed to sync products');
+    } finally {
+      setSyncingProducts(false);
+    }
+  };
+
   const handleUserAction = async (userId: string, action: string) => {
     try {
       const response = await fetch(`/api/admin/users/${userId}/${action}`, {
         method: 'POST',
       });
-      
+
       if (response.ok) {
         fetchUsers();
         fetchUserStats();
@@ -198,8 +237,39 @@ export const AdminSettings: React.FC = () => {
         </div>
       )}
 
+      {/* Section Navigation */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+        <div className="px-6 py-4">
+          <div className="flex space-x-4">
+            <button
+              onClick={() => setActiveSection('users')}
+              className={`px-4 py-2 rounded-md font-medium ${
+                activeSection === 'users'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Users className="w-4 h-4 inline mr-2" />
+              User Management
+            </button>
+            <button
+              onClick={() => setActiveSection('products')}
+              className={`px-4 py-2 rounded-md font-medium ${
+                activeSection === 'products'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Database className="w-4 h-4 inline mr-2" />
+              Stripe Products
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* User Management */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      {activeSection === 'users' && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">User Management</h2>
@@ -356,7 +426,74 @@ export const AdminSettings: React.FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
+        </div>
+      )}
+
+      {/* Stripe Products Management */}
+      {activeSection === 'products' && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Stripe Products</h2>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={syncStripeProducts}
+                disabled={syncingProducts}
+              >
+                <Database className="w-4 h-4 mr-2" />
+                {syncingProducts ? 'Syncing...' : 'Sync Products'}
+              </Button>
+            </div>
+          </div>
+
+          <div className="p-6">
+            {stripeProducts.length === 0 ? (
+              <div className="text-center py-8">
+                <Database className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No products found</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Sync with Stripe to manage your subscription products.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {stripeProducts.map((product) => (
+                  <div key={product.id} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        product.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {product.active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-4">{product.description}</p>
+                    <div className="space-y-2">
+                      <div className="text-sm">
+                        <span className="font-medium text-gray-700">Product ID:</span>
+                        <span className="ml-2 text-gray-600 font-mono text-xs">{product.id}</span>
+                      </div>
+                      {product.metadata && Object.keys(product.metadata).length > 0 && (
+                        <div className="text-sm">
+                          <span className="font-medium text-gray-700">Metadata:</span>
+                          <div className="ml-2 mt-1">
+                            {Object.entries(product.metadata).map(([key, value]) => (
+                              <div key={key} className="text-xs text-gray-600">
+                                <span className="font-medium">{key}:</span> {String(value)}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

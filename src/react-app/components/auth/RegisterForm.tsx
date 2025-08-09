@@ -12,12 +12,68 @@ interface RegisterFormProps {
 }
 
 const roleOptions = [
-  { value: 'subscriber' as UserRole, label: 'Subscriber', icon: '👤', description: 'Premium features and priority support' },
   { value: 'student' as UserRole, label: 'Student', icon: '🎓', description: 'For academic research and learning' },
   { value: 'professional' as UserRole, label: 'Professional', icon: '💼', description: 'For business and professional use' },
   { value: 'copywriter' as UserRole, label: 'Copywriter', icon: '✍️', description: 'For content creation and writing' },
   { value: 'video_editor' as UserRole, label: 'Video Editor', icon: '🎬', description: 'For video production and editing' },
   { value: 'admin' as UserRole, label: 'Admin', icon: '🛡️', description: 'System administration and management' },
+];
+
+const pricingPlans = [
+  {
+    id: 'free',
+    name: 'Free Trial',
+    price: '$0',
+    period: '7 days',
+    description: 'Perfect for trying out AudioText',
+    features: [
+      '30 minutes of transcription',
+      'Basic AI transcription',
+      'Standard support',
+      'Export to TXT, SRT',
+      'Web app access'
+    ],
+    popular: false,
+    stripePriceId: null
+  },
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: '$29',
+    period: 'month',
+    description: 'For professionals and content creators',
+    features: [
+      '500 minutes/month',
+      'Advanced AI models',
+      'Speaker identification',
+      'Custom vocabulary',
+      'Priority processing',
+      'All export formats',
+      'API access',
+      'Priority support'
+    ],
+    popular: true,
+    stripePriceId: 'price_pro_monthly' // Will be set from Stripe
+  },
+  {
+    id: 'enterprise',
+    name: 'Enterprise',
+    price: '$99',
+    period: 'month',
+    description: 'For teams and large organizations',
+    features: [
+      'Unlimited transcription',
+      'Custom AI training',
+      'Team collaboration',
+      'Advanced analytics',
+      'White-label options',
+      'Dedicated support',
+      'Custom integrations',
+      'SLA guarantee'
+    ],
+    popular: false,
+    stripePriceId: 'price_enterprise_monthly' // Will be set from Stripe
+  }
 ];
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin, showSwitchLink = true }) => {
@@ -28,6 +84,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
     password: '',
     confirmPassword: '',
     role: 'professional' as UserRole,
+    plan: 'free' as 'free' | 'pro' | 'enterprise',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -131,6 +188,71 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
             className="pl-10"
           />
           <Mail className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
+        </div>
+
+        {/* Pricing Plan Selection */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-4">
+            Choose your plan
+          </label>
+          <div className="space-y-3">
+            {pricingPlans.map((plan) => (
+              <div
+                key={plan.id}
+                className={`relative border rounded-lg p-4 cursor-pointer transition-all ${
+                  formData.plan === plan.id
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                } ${plan.popular ? 'ring-2 ring-blue-500' : ''}`}
+                onClick={() => setFormData(prev => ({ ...prev, plan: plan.id as any }))}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-2 left-4">
+                    <span className="bg-blue-500 text-white text-xs font-medium px-2 py-1 rounded-full">
+                      Most Popular
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="radio"
+                        name="plan"
+                        value={plan.id}
+                        checked={formData.plan === plan.id}
+                        onChange={() => setFormData(prev => ({ ...prev, plan: plan.id as any }))}
+                        className="text-blue-600 focus:ring-blue-500"
+                      />
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
+                        <p className="text-sm text-gray-600">{plan.description}</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 ml-6">
+                      <div className="flex items-baseline space-x-1">
+                        <span className="text-2xl font-bold text-gray-900">{plan.price}</span>
+                        <span className="text-sm text-gray-500">/{plan.period}</span>
+                      </div>
+                      <ul className="mt-2 space-y-1">
+                        {plan.features.slice(0, 3).map((feature, index) => (
+                          <li key={index} className="text-xs text-gray-600 flex items-center">
+                            <span className="text-green-500 mr-1">✓</span>
+                            {feature}
+                          </li>
+                        ))}
+                        {plan.features.length > 3 && (
+                          <li className="text-xs text-gray-500">
+                            +{plan.features.length - 3} more features
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div>
