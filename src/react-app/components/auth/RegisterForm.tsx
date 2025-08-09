@@ -89,45 +89,48 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-6xl mx-auto px-4">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-2">Create your account</h2>
         <p className="text-gray-600">Join AudioText and start transcribing</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
+        <form onSubmit={handleSubmit} className="space-y-8">
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
             {error}
           </div>
         )}
 
-        <div className="relative">
-          <Input
-            label="Full name"
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            required
-            placeholder="Enter your full name"
-            className="pl-10"
-          />
-          <User className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
-        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="relative">
+            <Input
+              label="Full name"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              placeholder="Enter your full name"
+              className="pl-10"
+            />
+            <User className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
+          </div>
 
-        <div className="relative">
-          <Input
-            label="Email address"
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            placeholder="Enter your email"
-            className="pl-10"
-          />
-          <Mail className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
+          <div className="relative">
+            <Input
+              label="Email address"
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="Enter your email"
+              className="pl-10"
+            />
+            <Mail className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
+          </div>
         </div>
 
         {/* Pricing Plan Selection */}
@@ -195,68 +198,70 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
 
 
 
-        <div className="relative">
-          <Input
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            required
-            placeholder="Create a password"
-            className="pl-10 pr-10"
-          />
-          <Lock className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-9 h-5 w-5 text-gray-400 hover:text-gray-600 focus:outline-none"
-          >
-            {showPassword ? <EyeOff /> : <Eye />}
-          </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="relative">
+            <Input
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              placeholder="Create a password"
+              className="pl-10 pr-10"
+            />
+            <Lock className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-9 h-5 w-5 text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+              {showPassword ? <EyeOff /> : <Eye />}
+            </button>
+          </div>
 
-          {/* Password Requirements */}
-          {formData.password && (
-            <div className="mt-2 text-xs">
-              <p className="text-gray-600 mb-1">Password must include:</p>
-              <ul className="space-y-1">
-                {[
-                  { check: formData.password.length >= 8, text: 'At least 8 characters' },
-                  { check: /[A-Z]/.test(formData.password), text: 'One uppercase letter' },
-                  { check: /[a-z]/.test(formData.password), text: 'One lowercase letter' },
-                  { check: /\d/.test(formData.password), text: 'One number' },
-                  { check: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password), text: 'One special character' },
-                ].map((req, index) => (
-                  <li key={index} className={`flex items-center space-x-2 ${req.check ? 'text-green-600' : 'text-red-500'}`}>
-                    <span className="text-xs">{req.check ? '✓' : '✗'}</span>
-                    <span>{req.text}</span>
-                  </li>
-                ))}
-              </ul>
+          <div className="relative">
+            <Input
+              label="Confirm password"
+              type={showConfirmPassword ? 'text' : 'password'}
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              placeholder="Confirm your password"
+              className="pl-10 pr-10"
+            />
+            <Lock className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
+            <button
+              type="button"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              className="absolute right-3 top-9 h-5 w-5 text-gray-400 hover:text-gray-600 focus:outline-none"
+            >
+              {showConfirmPassword ? <EyeOff /> : <Eye />}
+            </button>
+          </div>
+        </div>
+
+        {/* Password Requirements */}
+        {formData.password && (
+          <div className="text-xs bg-gray-50 p-4 rounded-lg">
+            <p className="text-gray-600 mb-2 font-medium">Password must include:</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {[
+                { check: formData.password.length >= 8, text: 'At least 8 characters' },
+                { check: /[A-Z]/.test(formData.password), text: 'One uppercase letter' },
+                { check: /[a-z]/.test(formData.password), text: 'One lowercase letter' },
+                { check: /\d/.test(formData.password), text: 'One number' },
+                { check: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password), text: 'One special character' },
+              ].map((req, index) => (
+                <div key={index} className={`flex items-center space-x-2 ${req.check ? 'text-green-600' : 'text-red-500'}`}>
+                  <span className="text-xs font-bold">{req.check ? '✓' : '✗'}</span>
+                  <span>{req.text}</span>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
-
-        <div className="relative">
-          <Input
-            label="Confirm password"
-            type={showConfirmPassword ? 'text' : 'password'}
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            required
-            placeholder="Confirm your password"
-            className="pl-10 pr-10"
-          />
-          <Lock className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
-          <button
-            type="button"
-            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute right-3 top-9 h-5 w-5 text-gray-400 hover:text-gray-600 focus:outline-none"
-          >
-            {showConfirmPassword ? <EyeOff /> : <Eye />}
-          </button>
-        </div>
+          </div>
+        )}
 
         <div className="flex items-start">
           <input
@@ -280,21 +285,22 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
         >
           Create account
         </Button>
-      </form>
+        </form>
 
-      {showSwitchLink && (
-        <div className="mt-6 text-center">
-          <p className="text-gray-600">
-            Already have an account?{' '}
-            <button
-              onClick={onSwitchToLogin}
-              className="text-blue-600 hover:text-blue-500 font-medium"
-            >
-              Sign in
-            </button>
-          </p>
-        </div>
-      )}
+        {showSwitchLink && (
+          <div className="mt-6 text-center">
+            <p className="text-gray-600">
+              Already have an account?{' '}
+              <button
+                onClick={onSwitchToLogin}
+                className="text-blue-600 hover:text-blue-500 font-medium"
+              >
+                Sign in
+              </button>
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
