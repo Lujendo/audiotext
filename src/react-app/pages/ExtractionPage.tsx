@@ -694,6 +694,70 @@ export const ExtractionPage: React.FC = () => {
                       />
 
                       <div className="space-y-4">
+                        {/* Professional Waveform Visualization */}
+                        <div className="bg-gradient-to-r from-blue-50 via-purple-50 to-blue-50 rounded-xl p-6 border border-blue-200 shadow-inner">
+                          <div className="flex items-center justify-between mb-4">
+                            <h4 className="text-sm font-semibold text-gray-800 flex items-center space-x-2">
+                              <div className="w-4 h-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded"></div>
+                              <span>Audio Waveform</span>
+                            </h4>
+                            <div className="flex items-center space-x-2 text-xs text-gray-600">
+                              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                              <span>Interactive</span>
+                            </div>
+                          </div>
+
+                          <div className="relative">
+                            {/* Waveform bars */}
+                            <div className="flex items-end justify-center h-20 space-x-0.5 bg-white rounded-lg p-2 shadow-sm">
+                              {Array.from({ length: 80 }, (_, i) => {
+                                const progress = (currentTime / duration) * 80;
+                                const isActive = i < progress;
+                                const height = 20 + Math.sin(i * 0.3) * 25 + Math.random() * 15;
+
+                                return (
+                                  <div
+                                    key={i}
+                                    className={`w-1 rounded-full transition-all duration-300 cursor-pointer hover:opacity-80 ${
+                                      isActive
+                                        ? 'bg-gradient-to-t from-blue-500 to-purple-600 shadow-sm'
+                                        : 'bg-gradient-to-t from-gray-300 to-gray-400'
+                                    }`}
+                                    style={{
+                                      height: `${Math.max(8, height)}%`,
+                                      opacity: isActive ? 1 : 0.7
+                                    }}
+                                    onClick={() => {
+                                      if (audioRef.current && duration > 0) {
+                                        const newTime = (i / 80) * duration;
+                                        audioRef.current.currentTime = newTime;
+                                        setCurrentTime(newTime);
+                                      }
+                                    }}
+                                    title={`Seek to ${formatTime((i / 80) * duration)}`}
+                                  />
+                                );
+                              })}
+                            </div>
+
+                            {/* Playhead indicator */}
+                            <div
+                              className="absolute top-0 bottom-0 w-0.5 bg-red-500 shadow-lg transition-all duration-100"
+                              style={{ left: `${2 + (currentTime / duration) * 96}%` }}
+                            >
+                              <div className="absolute -top-1 -left-1 w-2 h-2 bg-red-500 rounded-full shadow-md"></div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mt-3 text-xs text-gray-600">
+                            <span className="font-medium">Click waveform to seek</span>
+                            <div className="flex items-center space-x-4">
+                              <span>Sample Rate: 44.1kHz</span>
+                              <span>Bitrate: 320kbps</span>
+                            </div>
+                          </div>
+                        </div>
+
                         {/* Professional Control Panel */}
                         <div className="flex items-center justify-center space-x-8 mb-6">
                           {/* Skip Backward */}

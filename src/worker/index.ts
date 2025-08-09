@@ -1287,7 +1287,7 @@ app.post("/api/transcriptions/enhance", async (c) => {
       return c.json({ error: 'Text is required' }, 400);
     }
 
-    const transcriptionService = new TranscriptionService(c.env.AI, c.env.AUDIO_BUCKET);
+    const transcriptionService = new TranscriptionService(c.env.AI, c.env.AUDIO_BUCKET, c.env);
     const enhancedText = await transcriptionService.enhanceTranscription(text, context);
 
     return c.json({ enhancedText });
@@ -1317,7 +1317,7 @@ app.post("/api/transcriptions/summarize", async (c) => {
       return c.json({ error: 'Text is required' }, 400);
     }
 
-    const transcriptionService = new TranscriptionService(c.env.AI, c.env.AUDIO_BUCKET);
+    const transcriptionService = new TranscriptionService(c.env.AI, c.env.AUDIO_BUCKET, c.env);
     const summary = await transcriptionService.generateSummary(text, type);
 
     return c.json({ summary });
@@ -1465,7 +1465,7 @@ export default app;
 // Helper function to process transcription
 async function processTranscription(env: Env, audioFileId: string, _filename: string, userId: string) {
   try {
-    const transcriptionService = new TranscriptionService(env.AI, env.AUDIO_BUCKET);
+    const transcriptionService = new TranscriptionService(env.AI, env.AUDIO_BUCKET, env);
 
     // Get audio file record
     const audioFile = await env.DB.prepare(`

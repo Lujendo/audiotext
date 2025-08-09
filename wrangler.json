@@ -17,7 +17,8 @@
     "JWT_SECRET": "audiotext-jwt-secret-2024-secure-key",
     "CORS_ORIGIN": "https://audiotext.info-eac.workers.dev",
     "STRIPE_SECRET_KEY": "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",
-    "STRIPE_WEBHOOK_SECRET": "whsec_gPF1OWEQsshIknAPqlKWfalDttbOkviL"
+    "STRIPE_WEBHOOK_SECRET": "whsec_gPF1OWEQsshIknAPqlKWfalDttbOkviL",
+    "OPENAI_API_KEY": "sk-placeholder-key-replace-with-real-key"
   },
   "kv_namespaces": [
     {
