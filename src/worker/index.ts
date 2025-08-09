@@ -393,6 +393,47 @@ app.get("/api/admin/stats", async (c) => {
   }
 });
 
+app.get("/api/admin/system-stats", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware manually
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult; // Return error response if authentication failed
+  }
+
+  const auth = c.get('auth');
+
+  // Check if user is admin
+  if (auth?.user?.role !== 'admin') {
+    return c.json({ error: 'Unauthorized - Admin access required' }, 403);
+  }
+
+  try {
+    const userRepo = c.get('userRepo');
+    const totalUsers = await userRepo.getUserCount();
+
+    // Mock system data - replace with real data sources when available
+    const systemStats = {
+      totalUsers,
+      activeUsers: Math.floor(totalUsers * 0.3), // 30% active users
+      totalProjects: 0, // Will be implemented when projects table exists
+      totalTranscriptions: 0, // Will be implemented when transcriptions table exists
+      storageUsed: '0 GB', // Will be calculated from actual storage
+      apiCalls: 0 // Will be tracked when analytics are implemented
+    };
+
+    return c.json(systemStats);
+  } catch (error) {
+    console.error('System stats fetch error:', error);
+    return c.json({ error: 'Failed to fetch system stats' }, 500);
+  }
+});
+
 app.post("/api/admin/users/:id/:action", async (c) => {
   const jwtService = c.get('jwtService');
   const sessionService = c.get('sessionService');

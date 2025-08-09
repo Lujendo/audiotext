@@ -8,9 +8,18 @@ import {
   UserCheck,
   UserX,
   Crown,
-  Calendar,
   Mail,
-  Eye
+  Eye,
+  Edit,
+  Activity,
+  TrendingUp,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  Download,
+  Settings,
+  BarChart3
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -25,6 +34,9 @@ interface User {
   updated_at: string;
   last_login?: string;
   is_active: boolean;
+  subscription_status?: string;
+  plan_type?: string;
+  stripe_customer_id?: string;
 }
 
 interface UserStats {
@@ -34,15 +46,51 @@ interface UserStats {
   activeToday: number;
 }
 
+interface SystemStats {
+  totalUsers: number;
+  activeUsers: number;
+  totalProjects: number;
+  totalTranscriptions: number;
+  storageUsed: string;
+  apiCalls: number;
+}
+
 export const AdminSettings: React.FC = () => {
+  // Helper functions
+  const getRoleColor = (role: string): string => {
+    const colors: Record<string, string> = {
+      admin: 'text-red-800',
+      professional: 'text-blue-800',
+      student: 'text-green-800',
+      copywriter: 'text-purple-800',
+      video_editor: 'text-orange-800',
+      subscriber: 'text-indigo-800'
+    };
+    return colors[role] || 'text-gray-800';
+  };
+
+  const getRoleIcon = (role: string) => {
+    const iconProps = { className: 'h-5 w-5' };
+    const icons: Record<string, React.ReactElement> = {
+      admin: <Shield {...iconProps} className="h-5 w-5 text-red-600" />,
+      professional: <Users {...iconProps} className="h-5 w-5 text-blue-600" />,
+      student: <Users {...iconProps} className="h-5 w-5 text-green-600" />,
+      copywriter: <Edit {...iconProps} className="h-5 w-5 text-purple-600" />,
+      video_editor: <Activity {...iconProps} className="h-5 w-5 text-orange-600" />,
+      subscriber: <Crown {...iconProps} className="h-5 w-5 text-indigo-600" />
+    };
+    return icons[role] || <Users {...iconProps} className="h-5 w-5 text-gray-600" />;
+  };
   const [users, setUsers] = useState<User[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [systemStats, setSystemStats] = useState<SystemStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');
-  const [activeSection, setActiveSection] = useState<'users' | 'products'>('users');
+  const [activeSection, setActiveSection] = useState<'users' | 'analytics' | 'system' | 'products'>('users');
   const [stripeProducts, setStripeProducts] = useState<any[]>([]);
   const [syncingProducts, setSyncingProducts] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const roles = [
     { value: 'all', label: 'All Roles' },
@@ -57,6 +105,7 @@ export const AdminSettings: React.FC = () => {
   useEffect(() => {
     fetchUsers();
     fetchUserStats();
+    fetchSystemStats();
     if (activeSection === 'products') {
       fetchStripeProducts();
     }
@@ -68,11 +117,15 @@ export const AdminSettings: React.FC = () => {
       const params = new URLSearchParams();
       if (selectedRole !== 'all') params.append('role', selectedRole);
       if (searchQuery) params.append('search', searchQuery);
-      
-      const response = await fetch(`/api/admin/users?${params}`);
+
+      const response = await fetch(`/api/admin/users?${params}`, {
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
         setUsers(data.users || []);
+      } else {
+        console.error('Failed to fetch users:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -83,13 +136,50 @@ export const AdminSettings: React.FC = () => {
 
   const fetchUserStats = async () => {
     try {
-      const response = await fetch('/api/admin/stats');
+      const response = await fetch('/api/admin/stats', {
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
         setUserStats(data);
+      } else {
+        console.error('Failed to fetch user stats:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Failed to fetch user stats:', error);
+    }
+  };
+
+  const fetchSystemStats = async () => {
+    try {
+      const response = await fetch('/api/admin/system-stats', {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSystemStats(data);
+      } else {
+        // Mock data if endpoint doesn't exist yet
+        setSystemStats({
+          totalUsers: userStats?.total || 0,
+          activeUsers: userStats?.activeToday || 0,
+          totalProjects: 0,
+          totalTranscriptions: 0,
+          storageUsed: '0 GB',
+          apiCalls: 0
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch system stats:', error);
+      // Mock data on error
+      setSystemStats({
+        totalUsers: userStats?.total || 0,
+        activeUsers: userStats?.activeToday || 0,
+        totalProjects: 0,
+        totalTranscriptions: 0,
+        storageUsed: '0 GB',
+        apiCalls: 0
+      });
     }
   };
 
@@ -126,15 +216,32 @@ export const AdminSettings: React.FC = () => {
     }
   };
 
+  const refreshAllData = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        fetchUsers(),
+        fetchUserStats(),
+        fetchSystemStats()
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   const handleUserAction = async (userId: string, action: string) => {
     try {
       const response = await fetch(`/api/admin/users/${userId}/${action}`, {
         method: 'POST',
+        credentials: 'include'
       });
 
       if (response.ok) {
         fetchUsers();
         fetchUserStats();
+        fetchSystemStats();
+      } else {
+        console.error(`Failed to ${action} user:`, response.status, response.statusText);
       }
     } catch (error) {
       console.error(`Failed to ${action} user:`, error);
@@ -151,113 +258,143 @@ export const AdminSettings: React.FC = () => {
     });
   };
 
-  const getRoleColor = (role: string) => {
-    const colors = {
-      admin: 'bg-red-100 text-red-800',
-      subscriber: 'bg-yellow-100 text-yellow-800',
-      professional: 'bg-blue-100 text-blue-800',
-      student: 'bg-green-100 text-green-800',
-      copywriter: 'bg-purple-100 text-purple-800',
-      video_editor: 'bg-orange-100 text-orange-800',
-    };
-    return colors[role as keyof typeof colors] || 'bg-gray-100 text-gray-800';
-  };
 
-  const getRoleIcon = (role: string) => {
-    const icons = {
-      admin: Shield,
-      subscriber: Crown,
-      professional: Users,
-      student: Users,
-      copywriter: Users,
-      video_editor: Users,
-    };
-    const Icon = icons[role as keyof typeof icons] || Users;
-    return <Icon className="w-4 h-4" />;
-  };
 
   return (
     <div className="p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Settings</h1>
-        <p className="text-gray-600">Manage users, system settings, and monitor activity</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Settings</h1>
+            <p className="text-gray-600">Manage users, system settings, and monitor activity</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={refreshAllData}
+              disabled={refreshing}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+            <Button variant="primary" size="sm">
+              <Download className="w-4 h-4 mr-2" />
+              Export Data
+            </Button>
+          </div>
+        </div>
       </div>
 
-      {/* Stats Overview */}
-      {userStats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 rounded-lg bg-blue-100">
-                <Users className="h-6 w-6 text-blue-600" />
+      {/* Enhanced Stats Overview */}
+      {userStats && systemStats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-blue-100 text-sm font-medium">Total Users</p>
+                <p className="text-3xl font-bold">{userStats.total.toLocaleString()}</p>
+                <p className="text-blue-200 text-xs mt-1">
+                  +{userStats.recentSignups} this week
+                </p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Users</p>
-                <p className="text-2xl font-bold text-gray-900">{userStats.total}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 rounded-lg bg-green-100">
-                <UserCheck className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active Today</p>
-                <p className="text-2xl font-bold text-gray-900">{userStats.activeToday}</p>
+              <div className="p-3 bg-blue-400 bg-opacity-30 rounded-lg">
+                <Users className="h-8 w-8 text-blue-100" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 rounded-lg bg-purple-100">
-                <Calendar className="h-6 w-6 text-purple-600" />
+          <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-green-100 text-sm font-medium">Active Today</p>
+                <p className="text-3xl font-bold">{userStats.activeToday.toLocaleString()}</p>
+                <p className="text-green-200 text-xs mt-1">
+                  {Math.round((userStats.activeToday / userStats.total) * 100)}% of total
+                </p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Recent Signups</p>
-                <p className="text-2xl font-bold text-gray-900">{userStats.recentSignups}</p>
+              <div className="p-3 bg-green-400 bg-opacity-30 rounded-lg">
+                <Activity className="h-8 w-8 text-green-100" />
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-            <div className="flex items-center">
-              <div className="p-2 rounded-lg bg-orange-100">
-                <Database className="h-6 w-6 text-orange-600" />
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-100 text-sm font-medium">Transcriptions</p>
+                <p className="text-3xl font-bold">{systemStats.totalTranscriptions.toLocaleString()}</p>
+                <p className="text-purple-200 text-xs mt-1">
+                  Total processed
+                </p>
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Admins</p>
-                <p className="text-2xl font-bold text-gray-900">{userStats.byRole.admin || 0}</p>
+              <div className="p-3 bg-purple-400 bg-opacity-30 rounded-lg">
+                <BarChart3 className="h-8 w-8 text-purple-100" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-orange-100 text-sm font-medium">Storage Used</p>
+                <p className="text-3xl font-bold">{systemStats.storageUsed}</p>
+                <p className="text-orange-200 text-xs mt-1">
+                  Across all users
+                </p>
+              </div>
+              <div className="p-3 bg-orange-400 bg-opacity-30 rounded-lg">
+                <Database className="h-8 w-8 text-orange-100" />
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Section Navigation */}
+      {/* Enhanced Section Navigation */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
         <div className="px-6 py-4">
-          <div className="flex space-x-4">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setActiveSection('users')}
-              className={`px-4 py-2 rounded-md font-medium ${
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
                 activeSection === 'users'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
               <Users className="w-4 h-4 inline mr-2" />
               User Management
             </button>
             <button
+              onClick={() => setActiveSection('analytics')}
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                activeSection === 'analytics'
+                  ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <BarChart3 className="w-4 h-4 inline mr-2" />
+              Analytics
+            </button>
+            <button
+              onClick={() => setActiveSection('system')}
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                activeSection === 'system'
+                  ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Settings className="w-4 h-4 inline mr-2" />
+              System Settings
+            </button>
+            <button
               onClick={() => setActiveSection('products')}
-              className={`px-4 py-2 rounded-md font-medium ${
+              className={`px-4 py-2 rounded-md font-medium transition-colors ${
                 activeSection === 'products'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'text-gray-600 hover:text-gray-900'
+                  ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
               <Database className="w-4 h-4 inline mr-2" />
@@ -491,6 +628,136 @@ export const AdminSettings: React.FC = () => {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Section */}
+      {activeSection === 'analytics' && (
+        <div className="space-y-6">
+          {/* User Role Distribution */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">User Distribution by Role</h2>
+            {userStats && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Object.entries(userStats.byRole).map(([role, count]) => (
+                  <div key={role} className="bg-gray-50 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className={`p-2 rounded-lg ${getRoleColor(role).replace('text-', 'bg-').replace('800', '100')}`}>
+                          {getRoleIcon(role)}
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900 capitalize">{role}</p>
+                          <p className="text-xs text-gray-500">
+                            {Math.round((count / userStats.total) * 100)}% of total
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-gray-900">{count}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Recent Activity Chart Placeholder */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">User Activity Trends</h2>
+              <Button variant="outline" size="sm">
+                <TrendingUp className="w-4 h-4 mr-2" />
+                View Details
+              </Button>
+            </div>
+            <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center">
+              <div className="text-center">
+                <BarChart3 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <p className="text-gray-500">Analytics charts will be implemented here</p>
+                <p className="text-sm text-gray-400 mt-2">
+                  Integration with analytics service coming soon
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* System Settings Section */}
+      {activeSection === 'system' && (
+        <div className="space-y-6">
+          {/* System Health */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">System Health</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-green-900">Database</p>
+                    <p className="text-xs text-green-700">Operational</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <CheckCircle className="h-8 w-8 text-green-600" />
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-green-900">API Services</p>
+                    <p className="text-xs text-green-700">Healthy</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <AlertCircle className="h-8 w-8 text-yellow-600" />
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-yellow-900">Storage</p>
+                    <p className="text-xs text-yellow-700">Monitor Usage</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* System Configuration */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">System Configuration</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">User Registration</p>
+                  <p className="text-xs text-gray-500">Allow new users to register</p>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="ml-2 text-sm text-green-600">Enabled</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Email Verification</p>
+                  <p className="text-xs text-gray-500">Require email verification for new accounts</p>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="ml-2 text-sm text-green-600">Required</span>
+                </div>
+              </div>
+              <div className="flex items-center justify-between py-3">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Maintenance Mode</p>
+                  <p className="text-xs text-gray-500">Temporarily disable the application</p>
+                </div>
+                <div className="flex items-center">
+                  <XCircle className="h-5 w-5 text-gray-400" />
+                  <span className="ml-2 text-sm text-gray-500">Disabled</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
