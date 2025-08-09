@@ -23,16 +23,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[60] overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        {/* Backdrop */}
-        <div
-          className="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
-          onClick={onClose}
-        />
-        
-        {/* Modal */}
-        <div className="relative bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto z-[70]">
+    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[60] w-full max-w-md px-4">
+      {/* Modal - Clean design without backdrop */}
+      <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200 max-h-[80vh] overflow-y-auto">
           {/* Close button */}
           <button
             onClick={onClose}
@@ -56,7 +49,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             )}
           </div>
         </div>
-      </div>
     </div>
   );
 };
