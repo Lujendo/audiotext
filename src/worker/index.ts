@@ -3,6 +3,7 @@ import { JWTService, SessionService } from "./auth/jwt";
 import { UserRepository } from "./db/repository";
 import { PasswordService } from "./services/passwordService";
 import { StripeService } from "./services/stripeService";
+import { TranscriptionService } from "./services/transcriptionService";
 // import { createAuthRoutes } from "./routes/auth";
 import { createAuthMiddleware, corsMiddleware } from "./auth/middleware";
 
@@ -1005,4 +1006,430 @@ app.post("/api/stripe/prices", async (c) => {
   }
 });
 
+// Audio Upload and Transcription Endpoints
+
+// Upload audio file
+app.post("/api/audio/upload", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult;
+  }
+
+  const auth = c.get('auth');
+
+  try {
+    const formData = await c.req.formData();
+    const audioFile = formData.get('audio') as File;
+    const projectId = formData.get('projectId') as string;
+
+    if (!audioFile) {
+      return c.json({ error: 'No audio file provided' }, 400);
+    }
+
+    // Validate file type
+    const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/mp4', 'audio/m4a', 'audio/webm', 'video/mp4'];
+    if (!allowedTypes.includes(audioFile.type)) {
+      return c.json({ error: 'Unsupported file type' }, 400);
+    }
+
+    // Validate file size (max 100MB)
+    const maxSize = 100 * 1024 * 1024;
+    if (audioFile.size > maxSize) {
+      return c.json({ error: 'File too large. Maximum size is 100MB' }, 400);
+    }
+
+    // Generate unique filename
+    const fileId = crypto.randomUUID();
+    const extension = audioFile.name.split('.').pop() || 'mp3';
+    const filename = `${fileId}.${extension}`;
+
+    // Upload to R2 bucket
+    await c.env.AUDIO_BUCKET.put(filename, audioFile.stream(), {
+      httpMetadata: {
+        contentType: audioFile.type,
+      },
+      customMetadata: {
+        originalName: audioFile.name,
+        userId: auth.user.id,
+        uploadedAt: new Date().toISOString(),
+      },
+    });
+
+    // Save audio file record to database
+    await c.env.DB.prepare(`
+      INSERT INTO audio_files (id, user_id, project_id, filename, original_name, size, mime_type, url, status, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      fileId,
+      auth.user.id,
+      projectId || null,
+      filename,
+      audioFile.name,
+      audioFile.size,
+      audioFile.type,
+      `https://audiotext-files.${c.env.ENVIRONMENT}.workers.dev/${filename}`,
+      'processing',
+      new Date().toISOString(),
+      new Date().toISOString()
+    ).run();
+
+    // Start transcription process asynchronously
+    c.executionCtx.waitUntil(
+      processTranscription(c.env, fileId, filename, auth.user.id)
+    );
+
+    return c.json({
+      success: true,
+      audioFile: {
+        id: fileId,
+        filename: audioFile.name,
+        size: audioFile.size,
+        status: 'processing',
+      },
+    });
+  } catch (error) {
+    console.error('Audio upload error:', error);
+    return c.json({ error: 'Failed to upload audio file' }, 500);
+  }
+});
+
+// Get audio file with transcription
+app.get("/api/audio/:id", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult;
+  }
+
+  const auth = c.get('auth');
+  const audioId = c.req.param('id');
+
+  try {
+    // Get audio file
+    const audioFile = await c.env.DB.prepare(`
+      SELECT * FROM audio_files WHERE id = ? AND user_id = ?
+    `).bind(audioId, auth.user.id).first();
+
+    if (!audioFile) {
+      return c.json({ error: 'Audio file not found' }, 404);
+    }
+
+    // Get transcription if exists
+    const transcription = await c.env.DB.prepare(`
+      SELECT * FROM transcriptions WHERE audio_file_id = ?
+    `).bind(audioId).first();
+
+    return c.json({
+      audioFile: {
+        ...audioFile,
+        transcription: transcription ? {
+          ...transcription,
+          segments: JSON.parse((transcription.segments as string) || '[]'),
+        } : null,
+      },
+    });
+  } catch (error) {
+    console.error('Get audio file error:', error);
+    return c.json({ error: 'Failed to get audio file' }, 500);
+  }
+});
+
+// Update transcription text
+app.put("/api/transcriptions/:id", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult;
+  }
+
+  const auth = c.get('auth');
+  const transcriptionId = c.req.param('id');
+
+  try {
+    const { editedText } = await c.req.json();
+
+    if (!editedText) {
+      return c.json({ error: 'Edited text is required' }, 400);
+    }
+
+    // Update transcription
+    await c.env.DB.prepare(`
+      UPDATE transcriptions
+      SET edited_text = ?, last_edited_at = ?, updated_at = ?
+      WHERE id = ? AND user_id = ?
+    `).bind(
+      editedText,
+      new Date().toISOString(),
+      new Date().toISOString(),
+      transcriptionId,
+      auth.user.id
+    ).run();
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Update transcription error:', error);
+    return c.json({ error: 'Failed to update transcription' }, 500);
+  }
+});
+
+// Enhance transcription with AI
+app.post("/api/transcriptions/enhance", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult;
+  }
+
+  try {
+    const { text, context } = await c.req.json();
+
+    if (!text) {
+      return c.json({ error: 'Text is required' }, 400);
+    }
+
+    const transcriptionService = new TranscriptionService(c.env.AI, c.env.AUDIO_BUCKET);
+    const enhancedText = await transcriptionService.enhanceTranscription(text, context);
+
+    return c.json({ enhancedText });
+  } catch (error) {
+    console.error('Enhancement error:', error);
+    return c.json({ error: 'Failed to enhance transcription' }, 500);
+  }
+});
+
+// Generate summary of transcription
+app.post("/api/transcriptions/summarize", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult;
+  }
+
+  try {
+    const { text, type = 'brief' } = await c.req.json();
+
+    if (!text) {
+      return c.json({ error: 'Text is required' }, 400);
+    }
+
+    const transcriptionService = new TranscriptionService(c.env.AI, c.env.AUDIO_BUCKET);
+    const summary = await transcriptionService.generateSummary(text, type);
+
+    return c.json({ summary });
+  } catch (error) {
+    console.error('Summarization error:', error);
+    return c.json({ error: 'Failed to generate summary' }, 500);
+  }
+});
+
+// Export transcription in different formats
+app.post("/api/transcriptions/export", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult;
+  }
+
+  try {
+    const { transcriptionId, format, content } = await c.req.json();
+
+    if (!transcriptionId || !format || !content) {
+      return c.json({ error: 'Missing required fields' }, 400);
+    }
+
+    let exportContent = '';
+    let contentType = '';
+    let filename = '';
+
+    switch (format) {
+      case 'txt':
+        // Strip HTML tags for plain text
+        exportContent = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+        contentType = 'text/plain';
+        filename = 'transcription.txt';
+        break;
+
+      case 'pdf':
+        // For PDF, we'd need a PDF generation library
+        // For now, return HTML that can be converted to PDF client-side
+        exportContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Transcription</title>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; margin: 40px; }
+              h1, h2, h3 { color: #333; }
+            </style>
+          </head>
+          <body>
+            <h1>Audio Transcription</h1>
+            <div>${content}</div>
+          </body>
+          </html>
+        `;
+        contentType = 'text/html';
+        filename = 'transcription.html';
+        break;
+
+      case 'docx':
+        // For DOCX, we'd need a DOCX generation library
+        // For now, return RTF format which can be opened by Word
+        const rtfContent = content
+          .replace(/<h[1-6][^>]*>/g, '\\b ')
+          .replace(/<\/h[1-6]>/g, '\\b0\\par ')
+          .replace(/<p[^>]*>/g, '')
+          .replace(/<\/p>/g, '\\par ')
+          .replace(/<strong[^>]*>/g, '\\b ')
+          .replace(/<\/strong>/g, '\\b0 ')
+          .replace(/<em[^>]*>/g, '\\i ')
+          .replace(/<\/em>/g, '\\i0 ')
+          .replace(/<[^>]*>/g, '');
+
+        exportContent = `{\\rtf1\\ansi\\deff0 {\\fonttbl {\\f0 Times New Roman;}}\\f0\\fs24 ${rtfContent}}`;
+        contentType = 'application/rtf';
+        filename = 'transcription.rtf';
+        break;
+
+      default:
+        return c.json({ error: 'Unsupported format' }, 400);
+    }
+
+    return new Response(exportContent, {
+      headers: {
+        'Content-Type': contentType,
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
+    });
+  } catch (error) {
+    console.error('Export error:', error);
+    return c.json({ error: 'Failed to export transcription' }, 500);
+  }
+});
+
+// Get user's audio files
+app.get("/api/audio", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult;
+  }
+
+  const auth = c.get('auth');
+
+  try {
+    const audioFiles = await c.env.DB.prepare(`
+      SELECT af.*, t.id as transcription_id, t.text, t.edited_text, t.confidence, t.language, t.status as transcription_status
+      FROM audio_files af
+      LEFT JOIN transcriptions t ON af.id = t.audio_file_id
+      WHERE af.user_id = ?
+      ORDER BY af.created_at DESC
+    `).bind(auth.user.id).all();
+
+    return c.json({
+      audioFiles: audioFiles.results.map((file: any) => ({
+        ...file,
+        transcription: file.transcription_id ? {
+          id: file.transcription_id,
+          text: file.text,
+          editedText: file.edited_text,
+          confidence: file.confidence,
+          language: file.language,
+          status: file.transcription_status,
+        } : null,
+      })),
+    });
+  } catch (error) {
+    console.error('Get audio files error:', error);
+    return c.json({ error: 'Failed to get audio files' }, 500);
+  }
+});
+
 export default app;
+
+// Helper function to process transcription
+async function processTranscription(env: Env, audioFileId: string, _filename: string, userId: string) {
+  try {
+    const transcriptionService = new TranscriptionService(env.AI, env.AUDIO_BUCKET);
+
+    // Get audio file record
+    const audioFile = await env.DB.prepare(`
+      SELECT * FROM audio_files WHERE id = ?
+    `).bind(audioFileId).first();
+
+    if (!audioFile) {
+      throw new Error('Audio file not found');
+    }
+
+    // Perform transcription
+    const result = await transcriptionService.transcribeAudio(audioFile as any);
+
+    // Save transcription to database
+    const transcriptionId = crypto.randomUUID();
+    await env.DB.prepare(`
+      INSERT INTO transcriptions (id, audio_file_id, user_id, text, confidence, language, status, segments, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      transcriptionId,
+      audioFileId,
+      userId,
+      result.text,
+      result.confidence,
+      result.language,
+      'completed',
+      JSON.stringify(result.segments),
+      new Date().toISOString(),
+      new Date().toISOString()
+    ).run();
+
+    // Update audio file status
+    await env.DB.prepare(`
+      UPDATE audio_files SET status = ?, updated_at = ? WHERE id = ?
+    `).bind('completed', new Date().toISOString(), audioFileId).run();
+
+  } catch (error) {
+    console.error('Transcription processing error:', error);
+
+    // Update audio file status to failed
+    await env.DB.prepare(`
+      UPDATE audio_files SET status = ?, updated_at = ? WHERE id = ?
+    `).bind('failed', new Date().toISOString(), audioFileId).run();
+  }
+}

@@ -1,9 +1,10 @@
 import React from 'react';
-import { 
-  BookOpen, 
-  Clock, 
-  FileText, 
-  TrendingUp, 
+import { useNavigate } from 'react-router-dom';
+import {
+  BookOpen,
+  Clock,
+  FileText,
+  TrendingUp,
   Upload,
   Play,
   Download,
@@ -12,6 +13,7 @@ import {
 import { Button } from '../ui/Button';
 
 export const StudentDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const recentTranscriptions = [
     { id: 1, title: 'Biology Lecture - Chapter 5', duration: '45:30', date: '2 hours ago', status: 'completed' },
     { id: 2, title: 'History Seminar Discussion', duration: '32:15', date: '1 day ago', status: 'completed' },
@@ -43,7 +45,11 @@ export const StudentDashboard: React.FC = () => {
             </div>
             <Upload className="h-8 w-8 text-blue-200" />
           </div>
-          <Button variant="secondary" className="mt-4 bg-white text-blue-600 hover:bg-blue-50">
+          <Button
+            variant="secondary"
+            className="mt-4 bg-white text-blue-600 hover:bg-blue-50"
+            onClick={() => navigate('/transcribe')}
+          >
             Start Upload
           </Button>
         </div>
