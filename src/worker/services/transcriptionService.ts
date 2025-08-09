@@ -45,26 +45,18 @@ export class TranscriptionService {
       const audioBuffer = await audioObject.arrayBuffer();
       const audioArray = new Uint8Array(audioBuffer);
 
-      // Convert audio to base64 for Whisper API using chunked approach to avoid stack overflow
-      const chunkSize = 8192;
-      let base64Audio = '';
+      console.log(`Audio array prepared, length: ${audioArray.length} bytes`);
 
-      for (let i = 0; i < audioArray.length; i += chunkSize) {
-        const chunk = audioArray.slice(i, i + chunkSize);
-        const chunkString = Array.from(chunk, byte => String.fromCharCode(byte)).join('');
-        base64Audio += btoa(chunkString);
-      }
+      // Convert to number array for Cloudflare AI Whisper
+      // Try with a smaller sample first to test
+      const audioSample = Array.from(audioArray.slice(0, 16000)); // First ~1 second at 16kHz
+      console.log(`Audio sample prepared, length: ${audioSample.length} numbers`);
 
-      console.log(`Base64 conversion completed, length: ${base64Audio.length}`);
-
-      // Use Whisper Large V3 Turbo for high-quality transcription
+      // Use Whisper for high-quality transcription
       console.log('Calling Cloudflare AI Whisper model...');
-      const response = await this.ai.run('@cf/openai/whisper-large-v3-turbo', {
-        audio: base64Audio,
-        task: 'transcribe',
-        language: 'auto', // Auto-detect language
-        vad_filter: true, // Voice activity detection
-        initial_prompt: 'This is a professional audio transcription. Please provide accurate punctuation and formatting.',
+
+      const response = await this.ai.run('@cf/openai/whisper', {
+        audio: audioSample,
       });
 
       console.log('AI transcription completed:', response);
@@ -75,8 +67,8 @@ export class TranscriptionService {
       let averageConfidence = 0;
       let detectedLanguage = 'en';
 
-      if (response.segments && Array.isArray(response.segments)) {
-        response.segments.forEach((segment: any, index: number) => {
+      if ((response as any).segments && Array.isArray((response as any).segments)) {
+        (response as any).segments.forEach((segment: any, index: number) => {
           const segmentData: TranscriptionSegment = {
             id: `segment_${index}`,
             start: segment.start || 0,
@@ -93,7 +85,7 @@ export class TranscriptionService {
         averageConfidence = segments.reduce((sum, seg) => sum + seg.confidence, 0) / segments.length;
       } else {
         // Fallback for simple text response
-        fullText = response.text || '';
+        fullText = (response as any).text || response.text || '';
         averageConfidence = 0.85; // Default confidence
         
         // Create a single segment for the entire text
