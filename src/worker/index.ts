@@ -575,7 +575,7 @@ app.post("/api/stripe/sync-products", async (c) => {
   try {
     const stripeService = c.get('stripeService');
 
-    // Create or update products in Stripe
+    // Create or update products in Stripe based on our pricing plans
     const products = [
       {
         name: 'AudioText Pro',

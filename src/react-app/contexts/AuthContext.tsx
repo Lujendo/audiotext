@@ -14,7 +14,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, name: string, password: string, role: UserRole) => Promise<void>;
+  register: (email: string, name: string, password: string, role: UserRole, plan?: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -98,7 +98,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (email: string, name: string, password: string, role: UserRole) => {
+  const register = async (email: string, name: string, password: string, role: UserRole, plan?: string) => {
     try {
       const response = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
@@ -106,7 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ email, name, password, role }),
+        body: JSON.stringify({ email, name, password, role, plan }),
       });
 
       const data = await response.json();

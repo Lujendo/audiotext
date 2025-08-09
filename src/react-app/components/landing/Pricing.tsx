@@ -1,94 +1,7 @@
 import React from 'react';
 import { Button } from '../ui/Button';
 import { Check, Star, Zap } from 'lucide-react';
-
-const plans = [
-  {
-    name: 'Free',
-    price: 0,
-    period: 'forever',
-    description: 'Perfect for trying out AudioText',
-    features: [
-      '30 minutes of transcription per month',
-      'Basic text editor',
-      'Standard export formats (TXT, PDF)',
-      'Email support',
-      '1 GB storage',
-    ],
-    limitations: [
-      'Watermarked exports',
-      'No collaboration features',
-      'Basic accuracy',
-    ],
-    cta: 'Get Started Free',
-    popular: false,
-    color: 'gray',
-  },
-  {
-    name: 'Basic',
-    price: 19,
-    period: 'month',
-    description: 'Great for students and casual users',
-    features: [
-      '300 minutes of transcription per month',
-      'Advanced text editor with formatting',
-      'All export formats (PDF, DOCX, SRT, VTT)',
-      'Priority email support',
-      '10 GB storage',
-      'Speaker identification',
-      'Timestamp precision',
-    ],
-    limitations: [],
-    cta: 'Start Basic Plan',
-    popular: false,
-    color: 'blue',
-  },
-  {
-    name: 'Pro',
-    price: 49,
-    period: 'month',
-    description: 'Perfect for professionals and teams',
-    features: [
-      '1,000 minutes of transcription per month',
-      'Professional rich text editor',
-      'All export formats + custom templates',
-      'Priority support + live chat',
-      '100 GB storage',
-      'Advanced AI features',
-      'Team collaboration (up to 5 members)',
-      'Custom branding',
-      'API access',
-      'Advanced analytics',
-    ],
-    limitations: [],
-    cta: 'Start Pro Plan',
-    popular: true,
-    color: 'primary',
-  },
-  {
-    name: 'Enterprise',
-    price: 199,
-    period: 'month',
-    description: 'For large teams and organizations',
-    features: [
-      'Unlimited transcription',
-      'Enterprise-grade editor',
-      'All features + custom integrations',
-      'Dedicated account manager',
-      'Unlimited storage',
-      'Custom AI model training',
-      'Unlimited team members',
-      'White-label solution',
-      'Advanced security & compliance',
-      'Custom workflows',
-      'SLA guarantee',
-    ],
-    limitations: [],
-    cta: 'Contact Sales',
-    popular: false,
-    color: 'purple',
-  },
-];
+import { pricingPlans } from '../../data/pricingPlans';
 
 export const Pricing: React.FC = () => {
   return (
@@ -120,8 +33,8 @@ export const Pricing: React.FC = () => {
         </div>
 
         {/* Pricing cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {plans.map((plan, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          {pricingPlans.map((plan, index) => (
             <div
               key={index}
               className={`relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border-2 transition-all duration-300 hover:shadow-xl ${
@@ -181,9 +94,14 @@ export const Pricing: React.FC = () => {
                 </Button>
 
                 {/* Free trial note */}
-                {plan.price > 0 && (
+                {plan.id === 'pro' && (
                   <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
-                    14-day free trial included
+                    7-day free trial included
+                  </p>
+                )}
+                {plan.id === 'free' && (
+                  <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-4">
+                    No credit card required
                   </p>
                 )}
               </div>

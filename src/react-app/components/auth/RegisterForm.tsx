@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { UserRole } from '../../types';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { pricingPlans } from '../../data/pricingPlans';
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -11,70 +11,9 @@ interface RegisterFormProps {
   showSwitchLink?: boolean;
 }
 
-const roleOptions = [
-  { value: 'student' as UserRole, label: 'Student', icon: '🎓', description: 'For academic research and learning' },
-  { value: 'professional' as UserRole, label: 'Professional', icon: '💼', description: 'For business and professional use' },
-  { value: 'copywriter' as UserRole, label: 'Copywriter', icon: '✍️', description: 'For content creation and writing' },
-  { value: 'video_editor' as UserRole, label: 'Video Editor', icon: '🎬', description: 'For video production and editing' },
-  { value: 'admin' as UserRole, label: 'Admin', icon: '🛡️', description: 'System administration and management' },
-];
 
-const pricingPlans = [
-  {
-    id: 'free',
-    name: 'Free Trial',
-    price: '$0',
-    period: '7 days',
-    description: 'Perfect for trying out AudioText',
-    features: [
-      '30 minutes of transcription',
-      'Basic AI transcription',
-      'Standard support',
-      'Export to TXT, SRT',
-      'Web app access'
-    ],
-    popular: false,
-    stripePriceId: null
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: '$29',
-    period: 'month',
-    description: 'For professionals and content creators',
-    features: [
-      '500 minutes/month',
-      'Advanced AI models',
-      'Speaker identification',
-      'Custom vocabulary',
-      'Priority processing',
-      'All export formats',
-      'API access',
-      'Priority support'
-    ],
-    popular: true,
-    stripePriceId: 'price_pro_monthly' // Will be set from Stripe
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: '$99',
-    period: 'month',
-    description: 'For teams and large organizations',
-    features: [
-      'Unlimited transcription',
-      'Custom AI training',
-      'Team collaboration',
-      'Advanced analytics',
-      'White-label options',
-      'Dedicated support',
-      'Custom integrations',
-      'SLA guarantee'
-    ],
-    popular: false,
-    stripePriceId: 'price_enterprise_monthly' // Will be set from Stripe
-  }
-];
+
+
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin, showSwitchLink = true }) => {
   const { register } = useAuth();
@@ -83,7 +22,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'professional' as UserRole,
     plan: 'free' as 'free' | 'pro' | 'enterprise',
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -139,7 +77,9 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
     }
 
     try {
-      await register(formData.email, formData.name, formData.password, formData.role);
+      // Set default role based on plan selection
+      const defaultRole = formData.plan === 'enterprise' ? 'professional' : 'professional';
+      await register(formData.email, formData.name, formData.password, defaultRole, formData.plan);
       onSuccess?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed');
@@ -231,7 +171,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
                     </div>
                     <div className="mt-2 ml-6">
                       <div className="flex items-baseline space-x-1">
-                        <span className="text-2xl font-bold text-gray-900">{plan.price}</span>
+                        <span className="text-2xl font-bold text-gray-900">${plan.price}</span>
                         <span className="text-sm text-gray-500">/{plan.period}</span>
                       </div>
                       <ul className="mt-2 space-y-1">
@@ -255,37 +195,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
           </div>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            I am a...
-          </label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {roleOptions.map((option) => (
-              <label
-                key={option.value}
-                className={`relative flex flex-col p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
-                  formData.role === option.value
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="role"
-                  value={option.value}
-                  checked={formData.role === option.value}
-                  onChange={handleChange}
-                  className="sr-only"
-                />
-                <div className="flex items-center space-x-2">
-                  <span className="text-lg">{option.icon}</span>
-                  <span className="font-medium text-sm">{option.label}</span>
-                </div>
-                <span className="text-xs text-gray-500 mt-1">{option.description}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+
 
         <div className="relative">
           <Input
