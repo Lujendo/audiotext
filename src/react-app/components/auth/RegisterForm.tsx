@@ -135,7 +135,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
           <label className="block text-sm font-medium text-gray-700 mb-4">
             Choose your plan
           </label>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {pricingPlans.map((plan) => (
               <div
                 key={plan.id}
@@ -147,48 +147,46 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
                 onClick={() => setFormData(prev => ({ ...prev, plan: plan.id as any }))}
               >
                 {plan.popular && (
-                  <div className="absolute -top-2 left-4">
+                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
                     <span className="bg-blue-500 text-white text-xs font-medium px-2 py-1 rounded-full">
                       Most Popular
                     </span>
                   </div>
                 )}
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="radio"
-                        name="plan"
-                        value={plan.id}
-                        checked={formData.plan === plan.id}
-                        onChange={() => setFormData(prev => ({ ...prev, plan: plan.id as any }))}
-                        className="text-blue-600 focus:ring-blue-500"
-                      />
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">{plan.name}</h3>
-                        <p className="text-sm text-gray-600">{plan.description}</p>
-                      </div>
-                    </div>
-                    <div className="mt-2 ml-6">
-                      <div className="flex items-baseline space-x-1">
-                        <span className="text-2xl font-bold text-gray-900">${plan.price}</span>
-                        <span className="text-sm text-gray-500">/{plan.period}</span>
-                      </div>
-                      <ul className="mt-2 space-y-1">
-                        {plan.features.slice(0, 3).map((feature, index) => (
-                          <li key={index} className="text-xs text-gray-600 flex items-center">
-                            <span className="text-green-500 mr-1">✓</span>
-                            {feature}
-                          </li>
-                        ))}
-                        {plan.features.length > 3 && (
-                          <li className="text-xs text-gray-500">
-                            +{plan.features.length - 3} more features
-                          </li>
-                        )}
-                      </ul>
+
+                <div className="text-center">
+                  <input
+                    type="radio"
+                    name="plan"
+                    value={plan.id}
+                    checked={formData.plan === plan.id}
+                    onChange={() => setFormData(prev => ({ ...prev, plan: plan.id as any }))}
+                    className="text-blue-600 focus:ring-blue-500 mb-3"
+                  />
+
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{plan.name}</h3>
+                  <p className="text-sm text-gray-600 mb-3">{plan.description}</p>
+
+                  <div className="mb-4">
+                    <div className="flex items-baseline justify-center space-x-1">
+                      <span className="text-2xl font-bold text-gray-900">${plan.price}</span>
+                      <span className="text-sm text-gray-500">/{plan.period}</span>
                     </div>
                   </div>
+
+                  <ul className="space-y-1 text-left">
+                    {plan.features.slice(0, 4).map((feature, index) => (
+                      <li key={index} className="text-xs text-gray-600 flex items-start">
+                        <span className="text-green-500 mr-2 mt-0.5 flex-shrink-0">✓</span>
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                    {plan.features.length > 4 && (
+                      <li className="text-xs text-gray-500 text-center mt-2">
+                        +{plan.features.length - 4} more features
+                      </li>
+                    )}
+                  </ul>
                 </div>
               </div>
             ))}
