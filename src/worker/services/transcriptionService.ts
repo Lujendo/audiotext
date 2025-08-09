@@ -48,9 +48,13 @@ export class TranscriptionService {
 
       console.log('Using OpenAI Whisper API for proper MP3 transcription...');
 
+      // Read audio buffer once to avoid "body already used" error
+      const audioBuffer = await audioObject.arrayBuffer();
+      console.log(`Audio buffer prepared, size: ${audioBuffer.byteLength} bytes`);
+
       // Create FormData for OpenAI API
       const formData = new FormData();
-      const audioBlob = new Blob([await audioObject.arrayBuffer()], {
+      const audioBlob = new Blob([audioBuffer], {
         type: audioFile.mime_type || 'audio/mpeg'
       });
 
@@ -71,9 +75,9 @@ export class TranscriptionService {
         const errorText = await openaiResponse.text();
         console.error('OpenAI API error (likely missing/invalid API key):', errorText);
 
-        // Fallback to Cloudflare AI with artifact cleaning
+        // Fallback to Cloudflare AI with artifact cleaning using the same buffer
         console.log('OpenAI API failed, falling back to Cloudflare AI with artifact cleaning...');
-        return this.fallbackToCloudflareAI(audioFile, audioObject);
+        return this.fallbackToCloudflareAI(audioFile, audioBuffer);
       }
 
       const response = await openaiResponse.json() as any;
@@ -147,12 +151,11 @@ export class TranscriptionService {
   }
 
   /**
-   * Fallback to Cloudflare AI (with MP3 compatibility warning)
+   * Fallback to Cloudflare AI with artifact cleaning (using pre-read buffer)
    */
-  private async fallbackToCloudflareAI(audioFile: DatabaseAudioFile, audioObject: R2ObjectBody): Promise<TranscriptionResult> {
-    console.log('FALLBACK: Using Cloudflare AI (may produce MP3 artifacts)...');
+  private async fallbackToCloudflareAI(audioFile: DatabaseAudioFile, audioBuffer: ArrayBuffer): Promise<TranscriptionResult> {
+    console.log('FALLBACK: Using Cloudflare AI with artifact cleaning...');
 
-    const audioBuffer = await audioObject.arrayBuffer();
     const audioArray = new Uint8Array(audioBuffer);
     const audioNumbers = Array.from(audioArray);
 
