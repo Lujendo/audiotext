@@ -1,12 +1,10 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { DashboardLayout } from '../components/dashboard/DashboardLayout';
-import { StudentDashboard } from '../components/dashboard/StudentDashboard';
-import { ProfessionalDashboard } from '../components/dashboard/ProfessionalDashboard';
-import { CopywriterDashboard } from '../components/dashboard/CopywriterDashboard';
-import { VideoEditorDashboard } from '../components/dashboard/VideoEditorDashboard';
+import { FreeTrialDashboard } from '../components/dashboard/FreeTrialDashboard';
+import { ProDashboard } from '../components/dashboard/ProDashboard';
+import { EnterpriseDashboard } from '../components/dashboard/EnterpriseDashboard';
 import { AdminDashboard } from '../components/dashboard/AdminDashboard';
-import { SubscriberDashboard } from '../components/dashboard/SubscriberDashboard';
 
 export const Dashboard: React.FC = () => {
   const { user, loading } = useAuth();
@@ -31,21 +29,21 @@ export const Dashboard: React.FC = () => {
   }
 
   const renderDashboardContent = () => {
-    switch (user.role) {
-      case 'admin':
-        return <AdminDashboard />;
-      case 'subscriber':
-        return <SubscriberDashboard />;
-      case 'student':
-        return <StudentDashboard />;
-      case 'professional':
-        return <ProfessionalDashboard />;
-      case 'copywriter':
-        return <CopywriterDashboard />;
-      case 'video_editor':
-        return <VideoEditorDashboard />;
+    // Admin always gets admin dashboard
+    if (user.role === 'admin') {
+      return <AdminDashboard />;
+    }
+
+    // Use subscription tier for regular users
+    switch (user.subscriptionTier || 'free_trial') {
+      case 'free_trial':
+        return <FreeTrialDashboard />;
+      case 'pro':
+        return <ProDashboard />;
+      case 'enterprise':
+        return <EnterpriseDashboard />;
       default:
-        return <ProfessionalDashboard />; // Default fallback
+        return <FreeTrialDashboard />; // Default to free trial
     }
   };
 

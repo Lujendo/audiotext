@@ -86,6 +86,8 @@ export function createAuthRoutes(
             role: user.role,
             avatar: user.avatar,
             emailVerified: user.email_verified,
+            subscriptionTier: user.plan_type || 'free_trial',
+            subscriptionStatus: user.subscription_status || 'free',
           },
           token,
         },
@@ -140,6 +142,8 @@ export function createAuthRoutes(
             role: user.role,
             avatar: user.avatar,
             emailVerified: user.email_verified,
+            subscriptionTier: user.plan_type || 'free_trial',
+            subscriptionStatus: user.subscription_status || 'free',
           },
           token,
         },
@@ -173,9 +177,52 @@ export function createAuthRoutes(
     }
   });
 
-  // Get current user - temporarily disabled due to context type issues
+  // Get current user
   auth.get('/me', async (c) => {
-    return c.json({ error: 'Endpoint temporarily disabled' }, 501);
+    try {
+      const sessionService = getSessionService(c);
+      const userRepo = getUserRepo(c);
+
+      // Get session from cookie
+      const sessionCookie = c.req.header('Cookie')?.split(';')
+        .find(cookie => cookie.trim().startsWith('session='))
+        ?.split('=')[1];
+
+      if (!sessionCookie) {
+        return c.json({ error: 'No session found' }, 401);
+      }
+
+      // Validate session
+      const session = await sessionService.getSession(sessionCookie);
+      if (!session) {
+        return c.json({ error: 'Invalid session' }, 401);
+      }
+
+      // Get user
+      const user = await userRepo.findById(session.userId);
+      if (!user) {
+        return c.json({ error: 'User not found' }, 404);
+      }
+
+      return c.json({
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            avatar: user.avatar,
+            emailVerified: user.email_verified,
+            subscriptionTier: user.plan_type || 'free_trial',
+            subscriptionStatus: user.subscription_status || 'free',
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Get user error:', error);
+      return c.json({ error: 'Failed to get user' }, 500);
+    }
   });
 
   // Refresh token

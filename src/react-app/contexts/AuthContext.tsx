@@ -8,6 +8,8 @@ interface AuthUser {
   role: UserRole;
   avatar?: string;
   emailVerified: boolean;
+  subscriptionTier?: 'free_trial' | 'pro' | 'enterprise';
+  subscriptionStatus?: 'active' | 'canceled' | 'incomplete' | 'past_due' | 'trialing' | 'free';
 }
 
 interface AuthContextType {

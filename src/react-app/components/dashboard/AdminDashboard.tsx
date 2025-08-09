@@ -7,7 +7,10 @@ import {
   Zap,
   Database,
   Activity,
-  UserCheck
+  UserCheck,
+  Crown,
+  TrendingUp,
+  Building,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { AdminSettings } from '../admin/AdminSettings';
@@ -31,11 +34,17 @@ export const AdminDashboard: React.FC = () => {
     { id: 4, user: 'anna@university.edu', action: 'Failed Login Attempt', time: '18 minutes ago', status: 'warning' },
   ];
 
-  const usersByRole = [
-    { role: 'Professional', count: 1247, percentage: 44, color: 'bg-blue-500' },
-    { role: 'Student', count: 892, percentage: 31, color: 'bg-green-500' },
-    { role: 'Copywriter', count: 456, percentage: 16, color: 'bg-purple-500' },
-    { role: 'Video Editor', count: 252, percentage: 9, color: 'bg-orange-500' },
+  const usersByTier = [
+    { tier: 'Free Trial', count: 1247, percentage: 44, color: 'bg-green-500', revenue: '$0' },
+    { tier: 'Pro', count: 892, percentage: 31, color: 'bg-blue-500', revenue: '$25,868' },
+    { tier: 'Enterprise', count: 156, percentage: 25, color: 'bg-purple-500', revenue: '$15,444' },
+  ];
+
+  const subscriptionStats = [
+    { label: 'Monthly Revenue', value: '$41,312', icon: Crown, color: 'text-green-600', change: '+18%' },
+    { label: 'Trial Conversions', value: '23.4%', icon: TrendingUp, color: 'text-blue-600', change: '+5.2%' },
+    { label: 'Churn Rate', value: '2.1%', icon: AlertTriangle, color: 'text-orange-600', change: '-0.8%' },
+    { label: 'Enterprise Deals', value: '12', icon: Building, color: 'text-purple-600', change: '+3' },
   ];
 
   if (activeTab === 'settings') {
@@ -150,6 +159,34 @@ export const AdminDashboard: React.FC = () => {
         })}
       </div>
 
+      {/* Subscription Analytics */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {subscriptionStats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <div key={index} className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <Icon className={`w-5 h-5 ${stat.color}`} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-600">{stat.label}</p>
+                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className={`text-sm font-medium ${stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
+                    {stat.change}
+                  </span>
+                  <p className="text-xs text-gray-500">vs last month</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Recent Activity */}
         <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200">
@@ -197,20 +234,30 @@ export const AdminDashboard: React.FC = () => {
 
         {/* User Distribution & System Status */}
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Users by Role</h3>
+          <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+              <Crown className="w-5 h-5 text-blue-600" />
+              <span>Users by Subscription Tier</span>
+            </h3>
             <div className="space-y-4">
-              {usersByRole.map((role, index) => (
+              {usersByTier.map((tier, index) => (
                 <div key={index}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-900">{role.role}</span>
-                    <span className="text-sm text-gray-500">{role.count}</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm font-medium text-gray-900">{tier.tier}</span>
+                      <span className="text-xs text-gray-500">({tier.revenue})</span>
+                    </div>
+                    <span className="text-sm text-gray-500">{tier.count} users</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full ${role.color}`}
-                      style={{ width: `${role.percentage}%` }}
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div
+                      className={`h-3 rounded-full ${tier.color} transition-all duration-300`}
+                      style={{ width: `${tier.percentage}%` }}
                     ></div>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>{tier.percentage}% of users</span>
+                    <span>{tier.revenue} revenue</span>
                   </div>
                 </div>
               ))}

@@ -125,12 +125,25 @@ export const VideoEditorDashboard: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Projects */}
-        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
+        {/* Professional Recent Video Projects */}
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-6 py-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Video Projects</h2>
-              <Button variant="outline" size="sm">View All</Button>
+              <div className="flex items-center space-x-3">
+                <Video className="w-6 h-6" />
+                <div>
+                  <h2 className="text-xl font-bold">Recent Video Projects</h2>
+                  <p className="text-indigo-100">Your video transcriptions and subtitles</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/20"
+                onClick={() => navigate('/extract')}
+              >
+                View All
+              </Button>
             </div>
           </div>
           <div className="divide-y divide-gray-200">
