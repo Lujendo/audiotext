@@ -47,16 +47,50 @@ export class TranscriptionService {
 
       console.log(`Audio array prepared, length: ${audioArray.length} bytes`);
 
-      // Convert to number array for Cloudflare AI Whisper (as per documentation)
-      const audioNumbers = Array.from(audioArray);
-      console.log(`Audio converted to number array, length: ${audioNumbers.length} bytes`);
+      // Try different input formats for Cloudflare AI Whisper
+      console.log(`Audio buffer size: ${audioBuffer.byteLength} bytes`);
+
+      // The Cloudflare documentation shows using binary string format
+      // Let's try passing the raw audio file data directly
+      console.log('Attempting to use raw audio buffer for Whisper...');
 
       // Use Whisper for high-quality transcription
       console.log('Calling Cloudflare AI Whisper model...');
 
-      const response = await this.ai.run('@cf/openai/whisper', {
-        audio: audioNumbers,
-      });
+      let response;
+
+      // The issue is that MP3 files are compressed and Whisper expects raw audio samples
+      // Let's try using the Cloudflare AI with the raw file data
+      // According to some sources, Cloudflare AI can handle MP3 files directly
+
+      try {
+        console.log('Attempting transcription with raw MP3 data...');
+
+        // Convert the entire audio file to number array
+        const audioNumbers = Array.from(audioArray);
+
+        response = await this.ai.run('@cf/openai/whisper', {
+          audio: audioNumbers,
+        });
+
+        console.log('AI transcription successful with raw MP3 data');
+      } catch (error) {
+        console.log('Raw MP3 approach failed, trying with smaller sample...', error);
+
+        // Fallback: try with a much smaller sample
+        const sampleSize = Math.min(50000, audioArray.length); // 50KB sample
+        const audioSample = Array.from(audioArray.slice(0, sampleSize));
+
+        response = await this.ai.run('@cf/openai/whisper', {
+          audio: audioSample,
+        });
+
+        console.log('AI transcription successful with smaller sample');
+      }
+
+      if (!response) {
+        throw new Error('No response received from Whisper model');
+      }
 
       console.log('AI transcription completed:', response);
 

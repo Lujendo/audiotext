@@ -1033,6 +1033,27 @@ app.post("/api/audio/test", async (c) => {
   }
 });
 
+// Test AI endpoint
+app.get("/api/ai/test", async (c) => {
+  console.log('AI test endpoint called');
+
+  try {
+    // Test with a very small audio sample (just a few bytes)
+    const testAudio = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]; // Tiny test array
+    console.log('Testing AI with tiny audio sample:', testAudio.length, 'bytes');
+
+    const response = await c.env.AI.run('@cf/openai/whisper', {
+      audio: testAudio,
+    });
+
+    console.log('AI test successful:', response);
+    return c.json({ success: true, response });
+  } catch (error) {
+    console.error('AI test error:', error);
+    return c.json({ error: 'AI test failed', details: String(error) }, 500);
+  }
+});
+
 // Upload audio file
 app.post("/api/audio/upload", async (c) => {
   const jwtService = c.get('jwtService');
