@@ -47,55 +47,78 @@ export class TranscriptionService {
 
       console.log(`Audio array prepared, length: ${audioArray.length} bytes`);
 
-      // Convert to number array for Cloudflare AI Whisper
-      // Try with a smaller sample first to test
-      const audioSample = Array.from(audioArray.slice(0, 16000)); // First ~1 second at 16kHz
-      console.log(`Audio sample prepared, length: ${audioSample.length} numbers`);
+      // Convert to number array for Cloudflare AI Whisper (as per documentation)
+      const audioNumbers = Array.from(audioArray);
+      console.log(`Audio converted to number array, length: ${audioNumbers.length} bytes`);
 
       // Use Whisper for high-quality transcription
       console.log('Calling Cloudflare AI Whisper model...');
 
       const response = await this.ai.run('@cf/openai/whisper', {
-        audio: audioSample,
+        audio: audioNumbers,
       });
 
       console.log('AI transcription completed:', response);
 
-      // Process the response
+      // Process the Cloudflare Whisper response
       const segments: TranscriptionSegment[] = [];
       let fullText = '';
-      let averageConfidence = 0;
+      let averageConfidence = 0.85; // Cloudflare Whisper doesn't provide confidence scores
       let detectedLanguage = 'en';
 
-      if ((response as any).segments && Array.isArray((response as any).segments)) {
-        (response as any).segments.forEach((segment: any, index: number) => {
-          const segmentData: TranscriptionSegment = {
-            id: `segment_${index}`,
-            start: segment.start || 0,
-            end: segment.end || 0,
-            text: segment.text || '',
-            confidence: segment.avg_logprob ? Math.exp(segment.avg_logprob) : 0.8,
-            speaker: segment.speaker || undefined,
-          };
-          segments.push(segmentData);
-          fullText += segmentData.text + ' ';
-        });
+      if (response && typeof response === 'object') {
+        const whisperResponse = response as any;
 
-        // Calculate average confidence
-        averageConfidence = segments.reduce((sum, seg) => sum + seg.confidence, 0) / segments.length;
+        // Get the main transcription text
+        fullText = whisperResponse.text || '';
+        console.log(`Transcription text: "${fullText}"`);
+
+        // Process word-level timestamps if available
+        if (whisperResponse.words && Array.isArray(whisperResponse.words)) {
+          console.log(`Processing ${whisperResponse.words.length} words with timestamps`);
+
+          // Group words into segments (sentences or phrases)
+          let currentSegment = '';
+          let segmentStart = 0;
+          let segmentIndex = 0;
+
+          whisperResponse.words.forEach((word: any, index: number) => {
+            if (index === 0) {
+              segmentStart = word.start || 0;
+            }
+
+            currentSegment += (currentSegment ? ' ' : '') + (word.word || '');
+
+            // Create a new segment every ~10 words or at sentence boundaries
+            const isEndOfSentence = word.word?.match(/[.!?]$/);
+            const shouldBreakSegment = (index + 1) % 10 === 0 || isEndOfSentence || index === whisperResponse.words.length - 1;
+
+            if (shouldBreakSegment) {
+              segments.push({
+                id: `segment_${segmentIndex}`,
+                start: segmentStart,
+                end: word.end || word.start || 0,
+                text: currentSegment.trim(),
+                confidence: averageConfidence,
+              });
+              currentSegment = '';
+              segmentStart = word.end || word.start || 0;
+              segmentIndex++;
+            }
+          });
+        } else {
+          // Fallback: create a single segment with the full text
+          console.log('No word-level timestamps, creating single segment');
+          segments.push({
+            id: 'segment_0',
+            start: 0,
+            end: audioFile.duration || 0,
+            text: fullText,
+            confidence: averageConfidence,
+          });
+        }
       } else {
-        // Fallback for simple text response
-        fullText = (response as any).text || response.text || '';
-        averageConfidence = 0.85; // Default confidence
-        
-        // Create a single segment for the entire text
-        segments.push({
-          id: 'segment_0',
-          start: 0,
-          end: audioFile.duration || 0,
-          text: fullText,
-          confidence: averageConfidence,
-        });
+        throw new Error('Invalid response format from Whisper model');
       }
 
       return {
