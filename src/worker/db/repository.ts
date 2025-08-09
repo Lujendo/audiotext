@@ -53,8 +53,8 @@ export class UserRepository {
         user.name,
         user.password_hash,
         user.role,
-        user.avatar,
-        user.email_verified,
+        user.avatar || null,
+        user.email_verified ? 1 : 0, // Convert boolean to integer for SQLite
         user.created_at,
         user.updated_at,
         user.stripe_customer_id || null,
@@ -62,7 +62,7 @@ export class UserRepository {
         user.subscription_id || null,
         user.plan_type || 'free',
         user.last_login || null,
-        user.is_active
+        user.is_active ? 1 : 0 // Convert boolean to integer for SQLite
       )
       .run();
 
