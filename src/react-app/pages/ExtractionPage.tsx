@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import {
   Upload,
   FileAudio,
@@ -31,9 +32,14 @@ import {
   Headphones,
   FileVideo,
   Music,
+  ArrowLeft,
+  Home,
+  Archive,
+  Edit3,
 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { RichTextEditor } from '../components/editor/RichTextEditor';
+import { SavedExtractionsManager } from '../components/extractions/SavedExtractionsManager';
 
 interface AudioFile {
   id: string;
@@ -62,6 +68,7 @@ interface Transcription {
 
 export const ExtractionPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -88,6 +95,10 @@ export const ExtractionPage: React.FC = () => {
     customPrompt: '',
     outputFormat: 'standard',
   });
+
+  // Saved extractions management
+  const [savedExtractions, setSavedExtractions] = useState<Transcription[]>([]);
+  const [showSavedExtractions, setShowSavedExtractions] = useState(false);
 
 
 
@@ -322,6 +333,80 @@ export const ExtractionPage: React.FC = () => {
     }
   }, [transcription, editedContent]);
 
+  // Load saved extractions
+  const loadSavedExtractions = useCallback(async () => {
+    try {
+      const response = await fetch('/api/audio', {
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const extractionsWithTranscriptions = data.audioFiles
+          .filter((file: any) => file.transcription && file.transcription.status === 'completed')
+          .map((file: any) => ({
+            ...file.transcription,
+            audioFile: {
+              filename: file.filename,
+              originalName: file.originalName,
+              duration: file.duration,
+              createdAt: file.createdAt,
+            }
+          }));
+        setSavedExtractions(extractionsWithTranscriptions);
+      }
+    } catch (error) {
+      console.error('Failed to load saved extractions:', error);
+    }
+  }, []);
+
+  // Load saved extractions on component mount
+  useEffect(() => {
+    loadSavedExtractions();
+  }, [loadSavedExtractions]);
+
+  // Load a saved extraction
+  const loadSavedExtraction = useCallback(async (extractionId: string) => {
+    try {
+      const response = await fetch(`/api/audio/${extractionId}`, {
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAudioFile(data.audioFile);
+        setTranscription(data.audioFile.transcription);
+        setEditedContent(data.audioFile.transcription.editedText || data.audioFile.transcription.text);
+        setShowSavedExtractions(false);
+      }
+    } catch (error) {
+      console.error('Failed to load extraction:', error);
+      alert('Failed to load saved extraction');
+    }
+  }, []);
+
+  // Delete a saved extraction
+  const deleteSavedExtraction = useCallback(async (extractionId: string) => {
+    if (!confirm('Are you sure you want to delete this extraction?')) return;
+
+    try {
+      const response = await fetch(`/api/audio/${extractionId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        loadSavedExtractions(); // Refresh the list
+        alert('Extraction deleted successfully');
+      } else {
+        throw new Error('Delete failed');
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Failed to delete extraction');
+    }
+  }, []);
+
   const handleEnhance = useCallback(async () => {
     if (!transcription) return;
 
@@ -423,6 +508,44 @@ export const ExtractionPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Navigation Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 border-gray-300 hover:border-gray-400 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Dashboard</span>
+            </Button>
+            <div className="h-6 w-px bg-gray-300"></div>
+            <div className="flex items-center space-x-2">
+              <Home className="w-5 h-5 text-gray-400" />
+              <span className="text-gray-400">/</span>
+              <span className="text-gray-600 font-medium">Audio Extraction</span>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <Button
+              variant={showSavedExtractions ? "primary" : "outline"}
+              size="sm"
+              onClick={() => setShowSavedExtractions(!showSavedExtractions)}
+              className="flex items-center space-x-2"
+            >
+              <Archive className="w-4 h-4" />
+              <span>Saved Extractions</span>
+              {savedExtractions.length > 0 && (
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                  {savedExtractions.length}
+                </span>
+              )}
+            </Button>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -1022,6 +1145,72 @@ export const ExtractionPage: React.FC = () => {
                             </div>
                           </details>
                         </div>
+
+                        {/* Recent Extractions Quick Access */}
+                        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-semibold text-gray-900">Recent Extractions</h3>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowSavedExtractions(true)}
+                              className="text-blue-600 hover:text-blue-700"
+                            >
+                              View All
+                            </Button>
+                          </div>
+
+                          {savedExtractions.length === 0 ? (
+                            <div className="text-center py-6">
+                              <Archive className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                              <p className="text-sm text-gray-500">No saved extractions yet</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {savedExtractions.slice(0, 3).map((extraction) => (
+                                <div
+                                  key={extraction.id}
+                                  className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                                  onClick={() => loadSavedExtraction(extraction.id)}
+                                >
+                                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                    <FileText className="w-4 h-4 text-white" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate">
+                                      {(extraction as any).audioFile?.originalName || 'Untitled'}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {new Date((extraction as any).audioFile?.createdAt || (extraction as any).createdAt).toLocaleDateString()} • {extraction.text.split(' ').length} words
+                                    </p>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      loadSavedExtraction(extraction.id);
+                                    }}
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              ))}
+
+                              {savedExtractions.length > 3 && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setShowSavedExtractions(true)}
+                                  className="w-full text-blue-600 border-blue-300 hover:bg-blue-50"
+                                >
+                                  View {savedExtractions.length - 3} More
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </>
                   )}
@@ -1125,6 +1314,14 @@ export const ExtractionPage: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Saved Extractions Manager */}
+        <SavedExtractionsManager
+          isOpen={showSavedExtractions}
+          onClose={() => setShowSavedExtractions(false)}
+          onLoadExtraction={loadSavedExtraction}
+          onDeleteExtraction={deleteSavedExtraction}
+        />
       </div>
     </div>
   );

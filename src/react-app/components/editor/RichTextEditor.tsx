@@ -98,6 +98,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         heading: {
           levels: [1, 2, 3, 4, 5, 6],
         },
+        // Disable built-in link to avoid conflicts
+        link: false,
       }),
       TextStyle,
       Color,

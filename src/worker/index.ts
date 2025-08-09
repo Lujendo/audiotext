@@ -1401,6 +1401,46 @@ app.post("/api/transcriptions/export", async (c) => {
         filename = 'transcription.rtf';
         break;
 
+      case 'srt':
+        // Generate SRT subtitle format
+        const plainText = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+        const sentences = plainText.split(/[.!?]+/).filter((s: string) => s.trim().length > 0);
+        let srtContent = '';
+
+        sentences.forEach((sentence: string, index: number) => {
+          const startTime = index * 3; // 3 seconds per sentence
+          const endTime = (index + 1) * 3;
+          const startSRT = formatSRTTime(startTime);
+          const endSRT = formatSRTTime(endTime);
+
+          srtContent += `${index + 1}\n${startSRT} --> ${endSRT}\n${sentence.trim()}\n\n`;
+        });
+
+        exportContent = srtContent;
+        contentType = 'text/plain';
+        filename = 'transcription.srt';
+        break;
+
+      case 'vtt':
+        // Generate WebVTT caption format
+        const vttText = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+        const vttSentences = vttText.split(/[.!?]+/).filter((s: string) => s.trim().length > 0);
+        let vttContent = 'WEBVTT\n\n';
+
+        vttSentences.forEach((sentence: string, index: number) => {
+          const startTime = index * 3; // 3 seconds per sentence
+          const endTime = (index + 1) * 3;
+          const startVTT = formatVTTTime(startTime);
+          const endVTT = formatVTTTime(endTime);
+
+          vttContent += `${startVTT} --> ${endVTT}\n${sentence.trim()}\n\n`;
+        });
+
+        exportContent = vttContent;
+        contentType = 'text/vtt';
+        filename = 'transcription.vtt';
+        break;
+
       default:
         return c.json({ error: 'Unsupported format' }, 400);
     }
@@ -1459,6 +1499,25 @@ app.get("/api/audio", async (c) => {
     return c.json({ error: 'Failed to get audio files' }, 500);
   }
 });
+
+// Helper functions for subtitle formatting
+function formatSRTTime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 1000);
+
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
+}
+
+function formatVTTTime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  const ms = Math.floor((seconds % 1) * 1000);
+
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+}
 
 export default app;
 
