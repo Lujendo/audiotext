@@ -69,15 +69,28 @@ authApp.post('/register', async (c) => {
       return c.json({ success: false, error: 'All fields are required' }, 400);
     }
 
-    // Create demo user with specific IDs for testing
+    // Development user credentials with secure passwords
     // In a real implementation, you'd hash the password and store in DB
     let userId = 'user-' + Date.now();
 
-    // Create specific test users for admin and subscriber roles
-    if (email === 'admin@audiotext.com') {
-      userId = 'admin-user-001';
-    } else if (email === 'subscriber@audiotext.com') {
-      userId = 'subscriber-user-001';
+    // Development test users with predefined credentials
+    const devUsers = {
+      'admin@audiotext.com': { id: 'admin-user-001', role: 'admin', password: 'Admin123!' },
+      'subscriber@audiotext.com': { id: 'subscriber-user-001', role: 'subscriber', password: 'Sub123!' },
+      'student@audiotext.com': { id: 'student-user-001', role: 'student', password: 'Student123!' },
+      'pro@audiotext.com': { id: 'pro-user-001', role: 'professional', password: 'Pro123!' },
+      'writer@audiotext.com': { id: 'writer-user-001', role: 'copywriter', password: 'Writer123!' },
+      'editor@audiotext.com': { id: 'editor-user-001', role: 'video_editor', password: 'Editor123!' },
+    };
+
+    // Check if this is a development user
+    const devUser = devUsers[email as keyof typeof devUsers];
+    if (devUser) {
+      userId = devUser.id;
+      // Validate password for dev users
+      if (password !== devUser.password) {
+        return c.json({ error: 'Invalid credentials for development user' }, 401);
+      }
     }
 
     const newUser = {
@@ -131,22 +144,52 @@ authApp.post('/login', async (c) => {
       return c.json({ success: false, error: 'Email and password are required' }, 400);
     }
 
-    // For now, create a demo user if login is attempted
-    // In a real implementation, you'd verify the password
-    const demoUser = {
-      id: 'demo-user-' + Date.now(),
-      email: email,
-      name: email.split('@')[0],
-      role: 'professional' as const,
-      avatar: null,
-      email_verified: true,
+    // Development user credentials
+    const devUsers = {
+      'admin@audiotext.com': { id: 'admin-user-001', name: 'Admin User', role: 'admin' as const, password: 'Admin123!' },
+      'subscriber@audiotext.com': { id: 'subscriber-user-001', name: 'Premium Subscriber', role: 'subscriber' as const, password: 'Sub123!' },
+      'student@audiotext.com': { id: 'student-user-001', name: 'Student User', role: 'student' as const, password: 'Student123!' },
+      'pro@audiotext.com': { id: 'pro-user-001', name: 'Professional User', role: 'professional' as const, password: 'Pro123!' },
+      'writer@audiotext.com': { id: 'writer-user-001', name: 'Content Writer', role: 'copywriter' as const, password: 'Writer123!' },
+      'editor@audiotext.com': { id: 'editor-user-001', name: 'Video Editor', role: 'video_editor' as const, password: 'Editor123!' },
     };
 
+    // Check if this is a development user
+    const devUser = devUsers[email as keyof typeof devUsers];
+    let authenticatedUser;
+
+    if (devUser) {
+      // Validate password for dev users
+      if (password !== devUser.password) {
+        return c.json({ success: false, error: 'Invalid credentials' }, 401);
+      }
+
+      // Use the predefined dev user
+      authenticatedUser = {
+        id: devUser.id,
+        email: email,
+        name: devUser.name,
+        role: devUser.role,
+        avatar: null,
+        email_verified: true,
+      };
+    } else {
+      // For other emails, create a demo user (for development)
+      authenticatedUser = {
+        id: 'demo-user-' + Date.now(),
+        email: email,
+        name: email.split('@')[0],
+        role: 'professional' as const,
+        avatar: null,
+        email_verified: true,
+      };
+    }
+
     // Generate JWT token
-    const token = await jwtService.generateToken(demoUser.id, demoUser.email, demoUser.role);
+    const token = await jwtService.generateToken(authenticatedUser.id, authenticatedUser.email, authenticatedUser.role);
 
     // Create session
-    const sessionId = await sessionService.createSession(demoUser.id, token);
+    const sessionId = await sessionService.createSession(authenticatedUser.id, token);
 
     // Set session cookie
     c.header('Set-Cookie', `session=${sessionId}; HttpOnly; Secure; SameSite=Strict; Max-Age=${7 * 24 * 60 * 60}; Path=/`);
@@ -155,12 +198,12 @@ authApp.post('/login', async (c) => {
       success: true,
       data: {
         user: {
-          id: demoUser.id,
-          email: demoUser.email,
-          name: demoUser.name,
-          role: demoUser.role,
-          avatar: demoUser.avatar,
-          emailVerified: demoUser.email_verified,
+          id: authenticatedUser.id,
+          email: authenticatedUser.email,
+          name: authenticatedUser.name,
+          role: authenticatedUser.role,
+          avatar: authenticatedUser.avatar,
+          emailVerified: authenticatedUser.email_verified,
         },
         token,
       },

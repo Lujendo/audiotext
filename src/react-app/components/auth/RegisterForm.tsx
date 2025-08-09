@@ -34,19 +34,49 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Password validation function
+  const validatePassword = (password: string): string[] => {
+    const errors: string[] = [];
+
+    if (password.length < 8) {
+      errors.push('At least 8 characters long');
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push('At least one uppercase letter');
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push('At least one lowercase letter');
+    }
+    if (!/\d/.test(password)) {
+      errors.push('At least one number');
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      errors.push('At least one special character');
+    }
+
+    return errors;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+    // Validate password strength
+    const passwordValidationErrors = validatePassword(formData.password);
+    if (passwordValidationErrors.length > 0) {
+      setError(`Password requirements: ${passwordValidationErrors.join(', ')}`);
       setLoading(false);
       return;
     }
 
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
       setLoading(false);
       return;
     }
@@ -59,13 +89,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
   };
 
   return (
@@ -152,7 +175,6 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
             required
             placeholder="Create a password"
             className="pl-10 pr-10"
-            helperText="Must be at least 8 characters long"
           />
           <Lock className="absolute left-3 top-9 h-5 w-5 text-gray-400 pointer-events-none" />
           <button
@@ -162,6 +184,27 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
           >
             {showPassword ? <EyeOff /> : <Eye />}
           </button>
+
+          {/* Password Requirements */}
+          {formData.password && (
+            <div className="mt-2 text-xs">
+              <p className="text-gray-600 mb-1">Password must include:</p>
+              <ul className="space-y-1">
+                {[
+                  { check: formData.password.length >= 8, text: 'At least 8 characters' },
+                  { check: /[A-Z]/.test(formData.password), text: 'One uppercase letter' },
+                  { check: /[a-z]/.test(formData.password), text: 'One lowercase letter' },
+                  { check: /\d/.test(formData.password), text: 'One number' },
+                  { check: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password), text: 'One special character' },
+                ].map((req, index) => (
+                  <li key={index} className={`flex items-center space-x-2 ${req.check ? 'text-green-600' : 'text-red-500'}`}>
+                    <span className="text-xs">{req.check ? '✓' : '✗'}</span>
+                    <span>{req.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="relative">

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { LoginForm } from '../components/auth/LoginForm';
+import { DevCredentials } from '../components/auth/DevCredentials';
 import { Footer } from '../components/landing/Footer';
 
 export const LoginPage: React.FC = () => {
@@ -51,43 +52,49 @@ export const LoginPage: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="max-w-md w-full">
+        <div className="max-w-4xl w-full">
           {/* Welcome Message */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back</h1>
             <p className="text-gray-600">Sign in to your AudioText account</p>
           </div>
 
-          {/* Login Form Card */}
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
-            <LoginForm
-              onSuccess={handleSuccess}
-              onSwitchToRegister={handleSwitchToRegister}
-              showSwitchLink={false} // We'll use the header link instead
-            />
-            
-            {/* Register Link */}
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
-                <Link 
-                  to="/register" 
-                  className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                >
-                  Create one here
-                </Link>
+          {/* Development Credentials */}
+          <DevCredentials />
+
+          <div className="max-w-md mx-auto">
+
+            {/* Login Form Card */}
+            <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
+              <LoginForm
+                onSuccess={handleSuccess}
+                onSwitchToRegister={handleSwitchToRegister}
+                showSwitchLink={false} // We'll use the header link instead
+              />
+
+              {/* Register Link */}
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-600">
+                  Don't have an account?{' '}
+                  <Link
+                    to="/register"
+                    className="text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                  >
+                    Create one here
+                  </Link>
+                </p>
+              </div>
+            </div>
+
+            {/* Additional Info */}
+            <div className="mt-8 text-center">
+              <p className="text-xs text-gray-500">
+                By signing in, you agree to our{' '}
+                <Link to="/terms" className="text-blue-600 hover:text-blue-700">Terms of Service</Link>
+                {' '}and{' '}
+                <Link to="/privacy" className="text-blue-600 hover:text-blue-700">Privacy Policy</Link>
               </p>
             </div>
-          </div>
-
-          {/* Additional Info */}
-          <div className="mt-8 text-center">
-            <p className="text-xs text-gray-500">
-              By signing in, you agree to our{' '}
-              <Link to="/terms" className="text-blue-600 hover:text-blue-700">Terms of Service</Link>
-              {' '}and{' '}
-              <Link to="/privacy" className="text-blue-600 hover:text-blue-700">Privacy Policy</Link>
-            </p>
           </div>
         </div>
       </main>
