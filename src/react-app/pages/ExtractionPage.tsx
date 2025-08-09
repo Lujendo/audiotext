@@ -384,7 +384,7 @@ export const ExtractionPage: React.FC = () => {
     }
   }, [transcription, editedContent]);
 
-  const handleExport = useCallback(async (format: 'pdf' | 'docx' | 'txt') => {
+  const handleExport = useCallback(async (format: 'pdf' | 'docx' | 'txt' | 'srt' | 'vtt') => {
     if (!transcription) return;
 
     try {
@@ -1075,6 +1075,9 @@ export const ExtractionPage: React.FC = () => {
                   onEnhance={hasAdvancedAccess && !isEnhancing ? handleEnhance : undefined}
                   onSummarize={hasAdvancedAccess && !isSummarizing ? handleSummarize : undefined}
                   className="border-0 rounded-none"
+                  showAdvancedFeatures={hasAdvancedAccess}
+                  autoSave={true}
+                  placeholder="Your transcription will appear here. Use the professional editor to format, enhance, and export your content..."
                 />
               </div>
             ) : audioFile?.status === 'processing' ? (
