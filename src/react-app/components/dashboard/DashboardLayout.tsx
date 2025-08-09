@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { 
-  Menu, 
-  X, 
-  Home, 
-  Upload, 
-  FileText, 
+import { useNavigate, useLocation } from 'react-router-dom';
+import {
+  Menu,
+  X,
+  Home,
+  Upload,
+  FileText,
   LogOut,
   BarChart3,
   Search,
@@ -20,14 +21,16 @@ interface DashboardLayoutProps {
 
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: Home, current: true },
-    { name: 'Audio Extraction', href: '/extract', icon: Upload, current: false },
-    { name: 'Transcriptions', href: '/dashboard/transcriptions', icon: FileText, current: false },
-    { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, current: false },
-    { name: 'Search', href: '/dashboard/search', icon: Search, current: false },
+    { name: 'Dashboard', href: '/dashboard', icon: Home, current: location.pathname === '/dashboard' },
+    { name: 'Audio Extraction', href: '/extract', icon: Upload, current: location.pathname === '/extract' },
+    { name: 'Transcriptions', href: '/transcriptions', icon: FileText, current: location.pathname === '/transcriptions' },
+    { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, current: location.pathname.includes('/analytics') },
+    { name: 'Search', href: '/dashboard/search', icon: Search, current: location.pathname.includes('/search') },
   ];
 
   const handleLogout = async () => {
@@ -48,14 +51,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
               <X className="h-6 w-6 text-white" />
             </button>
           </div>
-          <SidebarContent navigation={navigation} user={user} onLogout={handleLogout} />
+          <SidebarContent navigation={navigation} user={user} onLogout={handleLogout} onNavigate={navigate} />
         </div>
       </div>
 
       {/* Desktop sidebar */}
       <div className="hidden md:flex md:flex-shrink-0">
         <div className="flex flex-col w-64">
-          <SidebarContent navigation={navigation} user={user} onLogout={handleLogout} />
+          <SidebarContent navigation={navigation} user={user} onLogout={handleLogout} onNavigate={navigate} />
         </div>
       </div>
 
@@ -128,9 +131,10 @@ interface SidebarContentProps {
   }>;
   user: any;
   onLogout: () => void;
+  onNavigate: (href: string) => void;
 }
 
-const SidebarContent: React.FC<SidebarContentProps> = ({ navigation, user, onLogout }) => {
+const SidebarContent: React.FC<SidebarContentProps> = ({ navigation, user, onLogout, onNavigate }) => {
   return (
     <div className="flex flex-col h-0 flex-1 border-r border-gray-200 bg-white">
       {/* Logo */}
@@ -147,10 +151,10 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ navigation, user, onLog
           {navigation.map((item) => {
             const Icon = item.icon;
             return (
-              <a
+              <button
                 key={item.name}
-                href={item.href}
-                className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                onClick={() => onNavigate(item.href)}
+                className={`w-full group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
                   item.current
                     ? 'bg-blue-100 text-blue-900'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -162,7 +166,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ navigation, user, onLog
                   }`}
                 />
                 {item.name}
-              </a>
+              </button>
             );
           })}
         </nav>

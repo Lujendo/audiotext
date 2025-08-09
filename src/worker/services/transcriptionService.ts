@@ -159,14 +159,49 @@ export class TranscriptionService {
     const audioArray = new Uint8Array(audioBuffer);
     const audioNumbers = Array.from(audioArray);
 
-    const response = await this.ai.run('@cf/openai/whisper', {
-      audio: audioNumbers,
-    });
+    // Retry logic for Cloudflare AI network issues
+    let lastError: Error | null = null;
+    const maxRetries = 3;
 
-    console.log('Cloudflare AI response (may contain artifacts):', response);
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Cloudflare AI attempt ${attempt}/${maxRetries}...`);
 
+        const response = await this.ai.run('@cf/openai/whisper', {
+          audio: audioNumbers,
+        });
+
+        console.log('Cloudflare AI response (may contain artifacts):', response);
+
+        // If we get here, the request succeeded
+        return this.processCloudflareResponse(response, audioFile);
+
+      } catch (error) {
+        lastError = error as Error;
+        console.error(`Cloudflare AI attempt ${attempt} failed:`, error);
+
+        if (attempt < maxRetries) {
+          // Wait before retrying (exponential backoff)
+          const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+          console.log(`Retrying in ${waitTime}ms...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+      }
+    }
+
+    // All retries failed
+    throw new Error(`Cloudflare AI failed after ${maxRetries} attempts. Last error: ${lastError?.message}`);
+  }
+
+  /**
+   * Process Cloudflare AI response with artifact cleaning
+   */
+  private processCloudflareResponse(response: any, audioFile: DatabaseAudioFile): TranscriptionResult {
     // Clean up the response to remove repetitive artifacts
     let fullText = (response as any).text || '';
+
+    console.log('Cleaning transcription artifacts from MP3 compression...');
+    console.log(`Original text length: ${fullText.length} characters`);
 
     // ARTIFACT REMOVAL: Remove repetitive phrases that are likely MP3 header artifacts
     fullText = this.cleanTranscriptionArtifacts(fullText);

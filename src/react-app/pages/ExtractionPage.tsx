@@ -469,7 +469,7 @@ export const ExtractionPage: React.FC = () => {
     }
   }, [transcription, editedContent]);
 
-  const handleExport = useCallback(async (format: 'pdf' | 'docx' | 'txt' | 'srt' | 'vtt') => {
+  const handleExport = useCallback(async (format: 'pdf' | 'docx' | 'txt' | 'srt' | 'vtt' | 'timestamped') => {
     if (!transcription) return;
 
     try {

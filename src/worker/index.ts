@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { JWTService, SessionService } from "./auth/jwt";
-import { UserRepository } from "./db/repository";
+import { UserRepository, TranscriptionRepository } from "./db/repository";
 import { PasswordService } from "./services/passwordService";
 import { StripeService } from "./services/stripeService";
 import { TranscriptionService } from "./services/transcriptionService";
@@ -1347,6 +1347,14 @@ app.post("/api/transcriptions/export", async (c) => {
       return c.json({ error: 'Missing required fields' }, 400);
     }
 
+    // Get transcription data for timestamp information
+    const transcriptionRepo = new TranscriptionRepository(c.env.DB);
+    const transcription = await transcriptionRepo.findById(transcriptionId);
+
+    if (!transcription) {
+      return c.json({ error: 'Transcription not found' }, 404);
+    }
+
     let exportContent = '';
     let contentType = '';
     let filename = '';
@@ -1402,19 +1410,33 @@ app.post("/api/transcriptions/export", async (c) => {
         break;
 
       case 'srt':
-        // Generate SRT subtitle format
-        const plainText = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
-        const sentences = plainText.split(/[.!?]+/).filter((s: string) => s.trim().length > 0);
+        // Generate SRT subtitle format with real timestamps
         let srtContent = '';
 
-        sentences.forEach((sentence: string, index: number) => {
-          const startTime = index * 3; // 3 seconds per sentence
-          const endTime = (index + 1) * 3;
-          const startSRT = formatSRTTime(startTime);
-          const endSRT = formatSRTTime(endTime);
+        if (transcription.segments && transcription.segments.length > 0) {
+          // Use real segments with timestamps
+          const segments = JSON.parse(transcription.segments);
+          segments.forEach((segment: any, index: number) => {
+            const startSRT = formatSRTTime(segment.start || 0);
+            const endSRT = formatSRTTime(segment.end || 0);
+            srtContent += `${index + 1}\n${startSRT} --> ${endSRT}\n${segment.text.trim()}\n\n`;
+          });
+        } else {
+          // Fallback: Generate timestamps based on content
+          const plainText = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+          const sentences = plainText.split(/[.!?]+/).filter((s: string) => s.trim().length > 0);
 
-          srtContent += `${index + 1}\n${startSRT} --> ${endSRT}\n${sentence.trim()}\n\n`;
-        });
+          sentences.forEach((sentence: string, index: number) => {
+            const wordsInSentence = sentence.trim().split(/\s+/).length;
+            const estimatedDuration = Math.max(2, wordsInSentence * 0.5); // 0.5 seconds per word, minimum 2 seconds
+            const startTime = index * estimatedDuration;
+            const endTime = startTime + estimatedDuration;
+            const startSRT = formatSRTTime(startTime);
+            const endSRT = formatSRTTime(endTime);
+
+            srtContent += `${index + 1}\n${startSRT} --> ${endSRT}\n${sentence.trim()}\n\n`;
+          });
+        }
 
         exportContent = srtContent;
         contentType = 'text/plain';
@@ -1422,23 +1444,84 @@ app.post("/api/transcriptions/export", async (c) => {
         break;
 
       case 'vtt':
-        // Generate WebVTT caption format
-        const vttText = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
-        const vttSentences = vttText.split(/[.!?]+/).filter((s: string) => s.trim().length > 0);
+        // Generate WebVTT caption format with real timestamps
         let vttContent = 'WEBVTT\n\n';
 
-        vttSentences.forEach((sentence: string, index: number) => {
-          const startTime = index * 3; // 3 seconds per sentence
-          const endTime = (index + 1) * 3;
-          const startVTT = formatVTTTime(startTime);
-          const endVTT = formatVTTTime(endTime);
+        if (transcription.segments && transcription.segments.length > 0) {
+          // Use real segments with timestamps
+          const segments = JSON.parse(transcription.segments);
+          segments.forEach((segment: any) => {
+            const startVTT = formatVTTTime(segment.start || 0);
+            const endVTT = formatVTTTime(segment.end || 0);
+            vttContent += `${startVTT} --> ${endVTT}\n${segment.text.trim()}\n\n`;
+          });
+        } else {
+          // Fallback: Generate timestamps based on content
+          const vttText = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+          const vttSentences = vttText.split(/[.!?]+/).filter((s: string) => s.trim().length > 0);
 
-          vttContent += `${startVTT} --> ${endVTT}\n${sentence.trim()}\n\n`;
-        });
+          vttSentences.forEach((sentence: string, index: number) => {
+            const wordsInSentence = sentence.trim().split(/\s+/).length;
+            const estimatedDuration = Math.max(2, wordsInSentence * 0.5); // 0.5 seconds per word, minimum 2 seconds
+            const startTime = index * estimatedDuration;
+            const endTime = startTime + estimatedDuration;
+            const startVTT = formatVTTTime(startTime);
+            const endVTT = formatVTTTime(endTime);
+
+            vttContent += `${startVTT} --> ${endVTT}\n${sentence.trim()}\n\n`;
+          });
+        }
 
         exportContent = vttContent;
         contentType = 'text/vtt';
         filename = 'transcription.vtt';
+        break;
+
+      case 'timestamped':
+        // Generate timestamped text format for video editors
+        let timestampedContent = '';
+
+        if (transcription.segments && transcription.segments.length > 0) {
+          // Use real segments with timestamps
+          const segments = JSON.parse(transcription.segments);
+          timestampedContent += '# Timestamped Transcription\n\n';
+          timestampedContent += `**File:** Audio File\n`;
+          timestampedContent += `**Generated:** ${new Date().toLocaleString()}\n`;
+          timestampedContent += `**Generated:** ${new Date().toLocaleString()}\n\n`;
+          timestampedContent += '---\n\n';
+
+          segments.forEach((segment: any) => {
+            const startTime = formatTimestamp(segment.start || 0);
+            const endTime = formatTimestamp(segment.end || 0);
+            timestampedContent += `**[${startTime} - ${endTime}]**\n`;
+            timestampedContent += `${segment.text.trim()}\n\n`;
+          });
+        } else {
+          // Fallback: Generate estimated timestamps
+          const plainText = content.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ');
+          const sentences = plainText.split(/[.!?]+/).filter((s: string) => s.trim().length > 0);
+
+          timestampedContent += '# Timestamped Transcription (Estimated)\n\n';
+          timestampedContent += `**Generated:** ${new Date().toLocaleString()}\n\n`;
+          timestampedContent += '---\n\n';
+
+          let currentTime = 0;
+          sentences.forEach((sentence: string) => {
+            const wordsInSentence = sentence.trim().split(/\s+/).length;
+            const estimatedDuration = Math.max(2, wordsInSentence * 0.5);
+            const startTime = formatTimestamp(currentTime);
+            const endTime = formatTimestamp(currentTime + estimatedDuration);
+
+            timestampedContent += `**[${startTime} - ${endTime}]**\n`;
+            timestampedContent += `${sentence.trim()}\n\n`;
+
+            currentTime += estimatedDuration;
+          });
+        }
+
+        exportContent = timestampedContent;
+        contentType = 'text/markdown';
+        filename = 'transcription-timestamped.md';
         break;
 
       default:
@@ -1517,6 +1600,19 @@ function formatVTTTime(seconds: number): string {
   const ms = Math.floor((seconds % 1) * 1000);
 
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+}
+
+// Helper function to format time for human-readable timestamps
+function formatTimestamp(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  } else {
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  }
 }
 
 export default app;

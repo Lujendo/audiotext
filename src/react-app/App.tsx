@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { Dashboard } from './pages/Dashboard';
 import { ExtractionPage } from './pages/ExtractionPage';
+import { TranscriptionListPage } from './pages/TranscriptionListPage';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -87,6 +88,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ExtractionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/transcriptions"
+            element={
+              <ProtectedRoute>
+                <TranscriptionListPage />
               </ProtectedRoute>
             }
           />

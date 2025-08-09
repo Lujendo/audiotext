@@ -56,6 +56,7 @@ import {
   Minimize,
   Settings,
   Printer,
+  Clock,
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import './RichTextEditor.css';
@@ -64,7 +65,7 @@ interface RichTextEditorProps {
   content: string;
   onChange: (content: string) => void;
   onSave?: () => void;
-  onExport?: (format: 'pdf' | 'docx' | 'txt' | 'srt' | 'vtt') => void;
+  onExport?: (format: 'pdf' | 'docx' | 'txt' | 'srt' | 'vtt' | 'timestamped') => void;
   onEnhance?: () => void;
   onSummarize?: () => void;
   className?: string;
@@ -820,6 +821,16 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
                           <div>
                             <div className="font-medium">SRT Subtitles</div>
                             <div className="text-xs text-gray-500">Subtitle format with timestamps</div>
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => onExport('timestamped')}
+                          className="flex items-center w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                        >
+                          <Clock className="w-4 h-4 mr-3 text-indigo-500" />
+                          <div>
+                            <div className="font-medium">Timestamped Text</div>
+                            <div className="text-xs text-gray-500">Human-readable text with timestamps</div>
                           </div>
                         </button>
                         <button
