@@ -8,6 +8,7 @@ import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 interface RegisterFormProps {
   onSuccess?: () => void;
   onSwitchToLogin?: () => void;
+  showSwitchLink?: boolean;
 }
 
 const roleOptions = [
@@ -19,7 +20,7 @@ const roleOptions = [
   { value: 'admin' as UserRole, label: 'Admin', icon: '🛡️', description: 'System administration and management' },
 ];
 
-export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin }) => {
+export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin, showSwitchLink = true }) => {
   const { register } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
@@ -208,17 +209,19 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
         </Button>
       </form>
 
-      <div className="mt-6 text-center">
-        <p className="text-gray-600">
-          Already have an account?{' '}
-          <button
-            onClick={onSwitchToLogin}
-            className="text-blue-600 hover:text-blue-500 font-medium"
-          >
-            Sign in
-          </button>
-        </p>
-      </div>
+      {showSwitchLink && (
+        <div className="mt-6 text-center">
+          <p className="text-gray-600">
+            Already have an account?{' '}
+            <button
+              onClick={onSwitchToLogin}
+              className="text-blue-600 hover:text-blue-500 font-medium"
+            >
+              Sign in
+            </button>
+          </p>
+        </div>
+      )}
     </div>
   );
 };

@@ -2,13 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
-import { AuthModal } from '../auth/AuthModal';
 import { Menu, X, Mic, User } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
@@ -20,16 +17,18 @@ export const Header: React.FC = () => {
   ];
 
   const handleSignIn = () => {
-    setAuthMode('login');
-    setAuthModalOpen(true);
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login');
+    }
   };
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
       navigate('/dashboard');
     } else {
-      setAuthMode('register');
-      setAuthModalOpen(true);
+      navigate('/register');
     }
   };
 
@@ -143,13 +142,6 @@ export const Header: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        initialMode={authMode}
-      />
     </header>
   );
 };

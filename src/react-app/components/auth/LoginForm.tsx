@@ -7,9 +7,10 @@ import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 interface LoginFormProps {
   onSuccess?: () => void;
   onSwitchToRegister?: () => void;
+  showSwitchLink?: boolean;
 }
 
-export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister }) => {
+export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister, showSwitchLink = true }) => {
   const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
@@ -113,17 +114,19 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
         </Button>
       </form>
 
-      <div className="mt-6 text-center">
-        <p className="text-gray-600">
-          Don't have an account?{' '}
-          <button
-            onClick={onSwitchToRegister}
-            className="text-blue-600 hover:text-blue-500 font-medium"
-          >
-            Sign up
-          </button>
-        </p>
-      </div>
+      {showSwitchLink && (
+        <div className="mt-6 text-center">
+          <p className="text-gray-600">
+            Don't have an account?{' '}
+            <button
+              onClick={onSwitchToRegister}
+              className="text-blue-600 hover:text-blue-500 font-medium"
+            >
+              Sign up
+            </button>
+          </p>
+        </div>
+      )}
     </div>
   );
 };

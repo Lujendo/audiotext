@@ -1,20 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
-import { AuthModal } from '../auth/AuthModal';
 import { Play, Mic, FileText, Zap } from 'lucide-react';
 
 export const Hero: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const handleStartTrial = () => {
     if (isAuthenticated) {
       navigate('/dashboard');
     } else {
-      setAuthModalOpen(true);
+      navigate('/register');
     }
   };
 
@@ -136,13 +134,6 @@ export const Hero: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        initialMode="register"
-      />
     </section>
   );
 };
