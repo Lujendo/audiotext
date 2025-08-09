@@ -64,6 +64,7 @@ export function createAuthRoutes(
         name: validatedData.name,
         password_hash: passwordHash,
         role: validatedData.role,
+        email_verified: false,
       });
 
       // Generate JWT token

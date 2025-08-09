@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { JWTService, SessionService } from "./auth/jwt";
 import { UserRepository } from "./db/repository";
+import { PasswordService } from "./services/passwordService";
 // import { createAuthRoutes } from "./routes/auth";
 import { createAuthMiddleware, corsMiddleware } from "./auth/middleware";
 
@@ -58,9 +59,6 @@ authApp.use('*', async (_c, next) => {
 // Add auth routes to sub-app
 authApp.post('/register', async (c) => {
   try {
-    const jwtService = c.get('jwtService') as JWTService;
-    const sessionService = c.get('sessionService') as SessionService;
-    // const userRepo = c.get('userRepo') as UserRepository;
 
     const body = await c.req.json();
     const { email, name, password, role } = body;
@@ -69,40 +67,37 @@ authApp.post('/register', async (c) => {
       return c.json({ success: false, error: 'All fields are required' }, 400);
     }
 
-    // Development user credentials with secure passwords
-    // In a real implementation, you'd hash the password and store in DB
-    let userId = 'user-' + Date.now();
-
-    // Development test users with predefined credentials
-    const devUsers = {
-      'admin@audiotext.com': { id: 'admin-user-001', role: 'admin', password: 'Admin123!' },
-      'subscriber@audiotext.com': { id: 'subscriber-user-001', role: 'subscriber', password: 'Sub123!' },
-      'student@audiotext.com': { id: 'student-user-001', role: 'student', password: 'Student123!' },
-      'pro@audiotext.com': { id: 'pro-user-001', role: 'professional', password: 'Pro123!' },
-      'writer@audiotext.com': { id: 'writer-user-001', role: 'copywriter', password: 'Writer123!' },
-      'editor@audiotext.com': { id: 'editor-user-001', role: 'video_editor', password: 'Editor123!' },
-    };
-
-    // Check if this is a development user
-    const devUser = devUsers[email as keyof typeof devUsers];
-    if (devUser) {
-      userId = devUser.id;
-      // Validate password for dev users
-      if (password !== devUser.password) {
-        return c.json({ error: 'Invalid credentials for development user' }, 401);
-      }
+    // Validate password strength
+    const passwordValidation = PasswordService.validatePasswordStrength(password);
+    if (!passwordValidation.isValid) {
+      return c.json({
+        error: 'Password does not meet requirements',
+        details: passwordValidation.errors
+      }, 400);
     }
 
-    const newUser = {
-      id: userId,
+    // Check if user already exists
+    const userRepo = c.get('userRepo');
+    const existingUser = await userRepo.findByEmail(email);
+    if (existingUser) {
+      return c.json({ error: 'User already exists' }, 409);
+    }
+
+    // Hash the password
+    const passwordHash = await PasswordService.hashPassword(password);
+
+    // Create user in database
+    const newUser = await userRepo.create({
       email: email,
       name: name,
-      role: role,
-      avatar: null,
-      email_verified: role === 'admin' || role === 'subscriber', // Auto-verify admin and subscriber
-    };
+      password_hash: passwordHash,
+      role: role as any,
+      email_verified: false
+    });
 
     // Generate JWT token
+    const jwtService = c.get('jwtService');
+    const sessionService = c.get('sessionService');
     const token = await jwtService.generateToken(newUser.id, newUser.email, newUser.role);
 
     // Create session
@@ -144,44 +139,39 @@ authApp.post('/login', async (c) => {
       return c.json({ success: false, error: 'Email and password are required' }, 400);
     }
 
-    // Development user credentials
-    const devUsers = {
-      'admin@audiotext.com': { id: 'admin-user-001', name: 'Admin User', role: 'admin' as const, password: 'Admin123!' },
-      'subscriber@audiotext.com': { id: 'subscriber-user-001', name: 'Premium Subscriber', role: 'subscriber' as const, password: 'Sub123!' },
-      'student@audiotext.com': { id: 'student-user-001', name: 'Student User', role: 'student' as const, password: 'Student123!' },
-      'pro@audiotext.com': { id: 'pro-user-001', name: 'Professional User', role: 'professional' as const, password: 'Pro123!' },
-      'writer@audiotext.com': { id: 'writer-user-001', name: 'Content Writer', role: 'copywriter' as const, password: 'Writer123!' },
-      'editor@audiotext.com': { id: 'editor-user-001', name: 'Video Editor', role: 'video_editor' as const, password: 'Editor123!' },
-    };
+    // Try to find user in database
+    const userRepo = c.get('userRepo');
+    const user = await userRepo.findByEmail(email);
 
-    // Check if this is a development user
-    const devUser = devUsers[email as keyof typeof devUsers];
-    let authenticatedUser;
+    if (user) {
+      // Verify password using hashed password
+      const isValidPassword = await PasswordService.verifyPassword(password, user.password_hash);
 
-    if (devUser) {
-      // Validate password for dev users
-      if (password !== devUser.password) {
+      if (!isValidPassword) {
         return c.json({ success: false, error: 'Invalid credentials' }, 401);
       }
 
-      // Use the predefined dev user
-      authenticatedUser = {
-        id: devUser.id,
-        email: email,
-        name: devUser.name,
-        role: devUser.role,
-        avatar: null,
-        email_verified: true,
+      // Update last login
+      await userRepo.updateLastLogin(user.id);
+
+      // Use the database user
+      var authenticatedUser = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        avatar: user.avatar,
+        email_verified: user.email_verified,
       };
     } else {
-      // For other emails, create a demo user (for development)
+      // For development: create a demo user if not found in database
       authenticatedUser = {
         id: 'demo-user-' + Date.now(),
         email: email,
         name: email.split('@')[0],
         role: 'professional' as const,
-        avatar: null,
-        email_verified: true,
+        avatar: undefined,
+        email_verified: false,
       };
     }
 
@@ -311,6 +301,209 @@ app.get("/api/protected/dashboard", (c) => {
     user: auth?.user,
     dashboardType: auth?.user?.role || 'default'
   });
+});
+
+// Admin API routes with proper authentication middleware
+app.get("/api/admin/users", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware manually
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult; // Return error response if authentication failed
+  }
+
+  const auth = c.get('auth');
+
+  // Check if user is admin
+  if (auth?.user?.role !== 'admin') {
+    return c.json({ error: 'Unauthorized - Admin access required' }, 403);
+  }
+
+  try {
+    const userRepo = c.get('userRepo');
+    const { role, search } = c.req.query();
+
+    let users;
+    if (role && role !== 'all') {
+      users = await userRepo.getUsersByRole(role);
+    } else if (search) {
+      users = await userRepo.searchUsers(search);
+    } else {
+      users = await userRepo.getAllUsers();
+    }
+
+    return c.json({ users });
+  } catch (error) {
+    console.error('Admin users fetch error:', error);
+    return c.json({ error: 'Failed to fetch users' }, 500);
+  }
+});
+
+app.get("/api/admin/stats", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware manually
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult; // Return error response if authentication failed
+  }
+
+  const auth = c.get('auth');
+
+  // Check if user is admin
+  if (auth?.user?.role !== 'admin') {
+    return c.json({ error: 'Unauthorized - Admin access required' }, 403);
+  }
+
+  try {
+    const userRepo = c.get('userRepo');
+
+    const total = await userRepo.getUserCount();
+    const byRole = await userRepo.getUserCountByRole();
+
+    // Mock data for now - in production, you'd calculate these from the database
+    const recentSignups = Math.floor(total * 0.1); // 10% of total as recent
+    const activeToday = Math.floor(total * 0.3); // 30% of total as active today
+
+    return c.json({
+      total,
+      byRole,
+      recentSignups,
+      activeToday
+    });
+  } catch (error) {
+    console.error('Admin stats fetch error:', error);
+    return c.json({ error: 'Failed to fetch stats' }, 500);
+  }
+});
+
+app.post("/api/admin/users/:id/:action", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware manually
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult; // Return error response if authentication failed
+  }
+
+  const auth = c.get('auth');
+
+  // Check if user is admin
+  if (auth?.user?.role !== 'admin') {
+    return c.json({ error: 'Unauthorized - Admin access required' }, 403);
+  }
+
+  try {
+    const userRepo = c.get('userRepo');
+    const { id, action } = c.req.param();
+
+    let result: any = null;
+
+    switch (action) {
+      case 'activate':
+        result = await userRepo.update(id, { is_active: true });
+        break;
+      case 'deactivate':
+        result = await userRepo.update(id, { is_active: false });
+        break;
+      case 'delete':
+        result = await userRepo.delete(id);
+        break;
+      default:
+        return c.json({ error: 'Invalid action' }, 400);
+    }
+
+    if (result) {
+      return c.json({ success: true });
+    } else {
+      return c.json({ error: 'Action failed' }, 500);
+    }
+  } catch (error) {
+    console.error('Admin user action error:', error);
+    return c.json({ error: 'Failed to perform action' }, 500);
+  }
+});
+
+// Initialize development users with hashed passwords
+app.post("/api/admin/init-dev-users", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware manually
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult; // Return error response if authentication failed
+  }
+
+  const auth = c.get('auth');
+
+  // Check if user is admin
+  if (auth?.user?.role !== 'admin') {
+    return c.json({ error: 'Unauthorized - Admin access required' }, 403);
+  }
+
+  try {
+    const userRepo = c.get('userRepo');
+
+    const devUsers = [
+      { email: 'admin@audiotext.com', name: 'Admin User', role: 'admin', password: 'Admin123!' },
+      { email: 'subscriber@audiotext.com', name: 'Premium Subscriber', role: 'subscriber', password: 'Sub123!' },
+      { email: 'student@audiotext.com', name: 'Student User', role: 'student', password: 'Student123!' },
+      { email: 'pro@audiotext.com', name: 'Professional User', role: 'professional', password: 'Pro123!' },
+      { email: 'writer@audiotext.com', name: 'Content Writer', role: 'copywriter', password: 'Writer123!' },
+      { email: 'editor@audiotext.com', name: 'Video Editor', role: 'video_editor', password: 'Editor123!' },
+    ];
+
+    const results = [];
+
+    for (const userData of devUsers) {
+      // Check if user already exists
+      const existingUser = await userRepo.findByEmail(userData.email);
+      if (existingUser) {
+        results.push({ email: userData.email, status: 'already_exists' });
+        continue;
+      }
+
+      // Hash the password
+      const passwordHash = await PasswordService.hashPassword(userData.password);
+
+      // Create the user
+      const user = await userRepo.create({
+        email: userData.email,
+        name: userData.name,
+        password_hash: passwordHash,
+        role: userData.role as any,
+        email_verified: true
+      });
+
+      results.push({ email: userData.email, status: 'created', id: user.id });
+    }
+
+    return c.json({
+      success: true,
+      message: 'Development users initialized',
+      results
+    });
+  } catch (error) {
+    console.error('Dev users init error:', error);
+    return c.json({ error: 'Failed to initialize development users' }, 500);
+  }
 });
 
 export default app;

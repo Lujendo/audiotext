@@ -3,11 +3,13 @@ export interface DatabaseUser {
   email: string;
   name: string;
   password_hash: string;
-  role: 'student' | 'professional' | 'copywriter' | 'video_editor' | 'admin';
+  role: 'student' | 'professional' | 'copywriter' | 'video_editor' | 'admin' | 'subscriber';
   avatar?: string;
   email_verified: boolean;
   created_at: string;
   updated_at: string;
+  last_login?: string;
+  is_active: boolean;
 }
 
 export interface DatabaseUserPreferences {
@@ -117,7 +119,9 @@ export interface DatabaseExport {
 }
 
 // Utility types for creating new records
-export type CreateUser = Omit<DatabaseUser, 'id' | 'created_at' | 'updated_at' | 'email_verified'>;
+export type CreateUser = Omit<DatabaseUser, 'id' | 'created_at' | 'updated_at' | 'last_login' | 'is_active'> & {
+  email_verified?: boolean;
+};
 export type CreateProject = Omit<DatabaseProject, 'id' | 'created_at' | 'updated_at' | 'last_accessed_at'>;
 export type CreateAudioFile = Omit<DatabaseAudioFile, 'id' | 'created_at' | 'updated_at'>;
 export type CreateTranscription = Omit<DatabaseTranscription, 'id' | 'created_at' | 'updated_at'>;

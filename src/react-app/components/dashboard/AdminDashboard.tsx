@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Users,
   Shield,
@@ -10,8 +10,13 @@ import {
   UserCheck
 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { AdminSettings } from '../admin/AdminSettings';
 
 export const AdminDashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'settings'>('overview');
+
+  const isSettingsTab = activeTab === 'settings';
+
   const systemStats = [
     { label: 'Total Users', value: '2,847', icon: Users, color: 'text-blue-600', change: '+12%' },
     { label: 'Active Sessions', value: '156', icon: Activity, color: 'text-green-600', change: '+8%' },
@@ -33,12 +38,37 @@ export const AdminDashboard: React.FC = () => {
     { role: 'Video Editor', count: 252, percentage: 9, color: 'bg-orange-500' },
   ];
 
+  if (activeTab === 'settings') {
+    return <AdminSettings />;
+  }
+
   return (
     <div className="p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
-        <p className="text-gray-600">System overview and user management</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
+            <p className="text-gray-600">System overview and user management</p>
+          </div>
+          <div className="flex space-x-2">
+            <Button
+              variant={activeTab === 'overview' ? 'primary' : 'outline'}
+              onClick={() => setActiveTab('overview')}
+              size="sm"
+            >
+              Overview
+            </Button>
+            <Button
+              variant={isSettingsTab ? 'primary' : 'secondary'}
+              onClick={() => setActiveTab('settings')}
+              size="sm"
+            >
+              <Settings className="w-4 h-4 mr-2" />
+              Settings
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Quick Actions */}
@@ -50,7 +80,12 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <h3 className="text-lg font-semibold mb-2">System Settings</h3>
           <p className="text-red-100 text-sm mb-4">Configure system parameters</p>
-          <Button variant="secondary" size="sm" className="bg-white text-red-600 hover:bg-red-50">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="bg-white text-red-600 hover:bg-red-50"
+            onClick={() => setActiveTab('settings')}
+          >
             Open Settings
           </Button>
         </div>

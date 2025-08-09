@@ -27,7 +27,8 @@ export class UserRepository {
     const user: DatabaseUser = {
       ...userData,
       id,
-      email_verified: false,
+      email_verified: userData.email_verified || false,
+      is_active: true,
       created_at: now,
       updated_at: now,
     };
@@ -91,6 +92,77 @@ export class UserRepository {
       .run();
 
     return (result.meta?.changes || 0) > 0;
+  }
+
+  // Admin-specific methods
+  async getAllUsers(limit: number = 100, offset: number = 0): Promise<DatabaseUser[]> {
+    const result = await this.db
+      .prepare(`
+        SELECT * FROM users
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+      `)
+      .bind(limit, offset)
+      .all();
+
+    return result.results as unknown as DatabaseUser[];
+  }
+
+  async getUsersByRole(role: string): Promise<DatabaseUser[]> {
+    const result = await this.db
+      .prepare('SELECT * FROM users WHERE role = ? ORDER BY created_at DESC')
+      .bind(role)
+      .all();
+
+    return result.results as unknown as DatabaseUser[];
+  }
+
+  async getUserCount(): Promise<number> {
+    const result = await this.db
+      .prepare('SELECT COUNT(*) as count FROM users')
+      .first();
+
+    return (result as any)?.count || 0;
+  }
+
+  async getUserCountByRole(): Promise<Record<string, number>> {
+    const result = await this.db
+      .prepare(`
+        SELECT role, COUNT(*) as count
+        FROM users
+        GROUP BY role
+      `)
+      .all();
+
+    const counts: Record<string, number> = {};
+    for (const row of result.results as any[]) {
+      counts[row.role] = row.count;
+    }
+
+    return counts;
+  }
+
+  async updateLastLogin(id: string): Promise<boolean> {
+    const result = await this.db
+      .prepare('UPDATE users SET updated_at = ? WHERE id = ?')
+      .bind(getCurrentTimestamp(), id)
+      .run();
+
+    return (result.meta?.changes || 0) > 0;
+  }
+
+  async searchUsers(query: string, limit: number = 50): Promise<DatabaseUser[]> {
+    const result = await this.db
+      .prepare(`
+        SELECT * FROM users
+        WHERE name LIKE ? OR email LIKE ?
+        ORDER BY created_at DESC
+        LIMIT ?
+      `)
+      .bind(`%${query}%`, `%${query}%`, limit)
+      .all();
+
+    return result.results as unknown as DatabaseUser[];
   }
 }
 
