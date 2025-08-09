@@ -230,8 +230,77 @@ npx wrangler d1 execute audiotext-db --command "SELECT * FROM users LIMIT 5"
 - `package.json` - Dependencies and build scripts
 - `tailwind.config.js` - Styling configuration
 
+## 🔐 Security & Privacy
+
+### **Data Protection**
+- JWT-based authentication with secure session management
+- User data isolation and access controls
+- Secure file upload and storage on Cloudflare R2
+- HTTPS-only communication with CORS protection
+
+### **Privacy Compliance**
+- User data stored securely in Cloudflare infrastructure
+- Audio files automatically processed and can be deleted
+- Transcription data belongs to the user
+- No data sharing with third parties
+
+## 🎯 Business Model
+
+### **Revenue Streams**
+1. **Subscription Tiers:** Monthly recurring revenue from Pro/Enterprise
+2. **Usage-Based:** Potential overage charges for high-volume users
+3. **Enterprise Deals:** Custom pricing for large organizations
+4. **API Access:** Developer-focused API usage pricing
+
+### **Target Markets**
+- **Content Creators:** Podcasters, YouTubers, journalists
+- **Professionals:** Lawyers, doctors, researchers, consultants
+- **Enterprises:** Teams needing collaboration and compliance
+- **Developers:** API access for integration into other platforms
+
+## 🚨 Known Issues & Workarounds
+
+### **1. OpenAI API Key**
+- **Issue:** Currently using placeholder key
+- **Impact:** Primary transcription service unavailable
+- **Workaround:** Cloudflare AI fallback with retry logic
+- **Solution:** Replace with valid OpenAI API key in environment variables
+
+### **2. Cloudflare AI Network Issues**
+- **Issue:** Intermittent "Network connection lost" errors
+- **Impact:** Transcription failures during network instability
+- **Workaround:** Implemented 3-attempt retry with exponential backoff
+- **Monitoring:** Wrangler tail shows retry attempts and success rates
+
+### **3. Large File Processing**
+- **Issue:** Files >25MB may timeout during processing
+- **Impact:** Long audio files may fail to transcribe
+- **Workaround:** Client-side file size validation and chunking
+- **Future:** Implement streaming transcription for large files
+
+## 🔧 Maintenance & Monitoring
+
+### **Health Checks**
+- Monitor Wrangler tail for error patterns
+- Check D1 database performance and storage usage
+- Monitor R2 bucket storage costs and usage
+- Track API response times and success rates
+
+### **Performance Optimization**
+- Bundle size optimization (current: 806KB main chunk)
+- Consider code splitting for large components
+- Optimize image assets and static resources
+- Database query optimization for large datasets
+
+### **Backup & Recovery**
+- D1 database automatic backups by Cloudflare
+- R2 storage with versioning enabled
+- Git repository with full version history
+- Environment variable backup in secure storage
+
 ---
 
 **Last Updated:** 2025-08-09
 **Version:** 2.0.0 (Tier-Based Dashboard System)
 **Status:** Production Ready (pending OpenAI API key)
+**Deployment:** https://audiotext.info-eac.workers.dev
