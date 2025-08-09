@@ -1,8 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../ui/Button';
+import { AuthModal } from '../auth/AuthModal';
 import { Play, Mic, FileText, Zap } from 'lucide-react';
 
 export const Hero: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  const handleStartTrial = () => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    } else {
+      setAuthModalOpen(true);
+    }
+  };
+
+  const handleWatchDemo = () => {
+    // Scroll to features section or open demo modal
+    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* Background decoration */}
@@ -33,11 +53,11 @@ export const Hero: React.FC = () => {
 
           {/* CTA buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Button size="lg" className="w-full sm:w-auto">
+            <Button size="lg" className="w-full sm:w-auto" onClick={handleStartTrial}>
               <Play className="w-5 h-5 mr-2" />
-              Start Free Trial
+              {isAuthenticated ? 'Go to Dashboard' : 'Start Free Trial'}
             </Button>
-            <Button variant="outline" size="lg" className="w-full sm:w-auto">
+            <Button variant="outline" size="lg" className="w-full sm:w-auto" onClick={handleWatchDemo}>
               <Mic className="w-5 h-5 mr-2" />
               Watch Demo
             </Button>
@@ -116,6 +136,13 @@ export const Hero: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        initialMode="register"
+      />
     </section>
   );
 };
