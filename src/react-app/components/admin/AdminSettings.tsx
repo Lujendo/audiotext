@@ -19,7 +19,8 @@ import {
   RefreshCw,
   Download,
   Settings,
-  BarChart3
+  BarChart3,
+  Plus
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -91,6 +92,15 @@ export const AdminSettings: React.FC = () => {
   const [stripeProducts, setStripeProducts] = useState<any[]>([]);
   const [syncingProducts, setSyncingProducts] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [syncingProductId, setSyncingProductId] = useState<string | null>(null);
+  const [productForm, setProductForm] = useState({
+    name: '',
+    description: '',
+    active: true,
+    metadata: {} as Record<string, string>
+  });
 
   const roles = [
     { value: 'all', label: 'All Roles' },
@@ -200,6 +210,7 @@ export const AdminSettings: React.FC = () => {
       setSyncingProducts(true);
       const response = await fetch('/api/stripe/sync-products', {
         method: 'POST',
+        credentials: 'include'
       });
 
       if (response.ok) {
@@ -213,6 +224,92 @@ export const AdminSettings: React.FC = () => {
       alert('Failed to sync products');
     } finally {
       setSyncingProducts(false);
+    }
+  };
+
+  const syncSingleProduct = async (productId: string) => {
+    try {
+      setSyncingProductId(productId);
+      const response = await fetch(`/api/stripe/sync-product/${productId}`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        fetchStripeProducts();
+        alert('Product synced successfully!');
+      } else {
+        alert('Failed to sync product');
+      }
+    } catch (error) {
+      console.error('Failed to sync product:', error);
+      alert('Failed to sync product');
+    } finally {
+      setSyncingProductId(null);
+    }
+  };
+
+  const openProductModal = (product?: any) => {
+    if (product) {
+      setEditingProduct(product);
+      setProductForm({
+        name: product.name || '',
+        description: product.description || '',
+        active: product.active !== false,
+        metadata: product.metadata || {}
+      });
+    } else {
+      setEditingProduct(null);
+      setProductForm({
+        name: '',
+        description: '',
+        active: true,
+        metadata: {}
+      });
+    }
+    setShowProductModal(true);
+  };
+
+  const closeProductModal = () => {
+    setShowProductModal(false);
+    setEditingProduct(null);
+    setProductForm({
+      name: '',
+      description: '',
+      active: true,
+      metadata: {}
+    });
+  };
+
+  const handleProductSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const url = editingProduct
+        ? `/api/stripe/products/${editingProduct.id}`
+        : '/api/stripe/products';
+
+      const method = editingProduct ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(productForm)
+      });
+
+      if (response.ok) {
+        fetchStripeProducts();
+        closeProductModal();
+        alert(`Product ${editingProduct ? 'updated' : 'created'} successfully!`);
+      } else {
+        alert(`Failed to ${editingProduct ? 'update' : 'create'} product`);
+      }
+    } catch (error) {
+      console.error('Failed to save product:', error);
+      alert(`Failed to ${editingProduct ? 'update' : 'create'} product`);
     }
   };
 
@@ -572,15 +669,25 @@ export const AdminSettings: React.FC = () => {
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Stripe Products</h2>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={syncStripeProducts}
-                disabled={syncingProducts}
-              >
-                <Database className="w-4 h-4 mr-2" />
-                {syncingProducts ? 'Syncing...' : 'Sync Products'}
-              </Button>
+              <div className="flex items-center space-x-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openProductModal()}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Product
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={syncStripeProducts}
+                  disabled={syncingProducts}
+                >
+                  <Database className="w-4 h-4 mr-2" />
+                  {syncingProducts ? 'Syncing...' : 'Sync All'}
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -606,7 +713,7 @@ export const AdminSettings: React.FC = () => {
                       </span>
                     </div>
                     <p className="text-sm text-gray-600 mb-4">{product.description}</p>
-                    <div className="space-y-2">
+                    <div className="space-y-2 mb-4">
                       <div className="text-sm">
                         <span className="font-medium text-gray-700">Product ID:</span>
                         <span className="ml-2 text-gray-600 font-mono text-xs">{product.id}</span>
@@ -623,6 +730,32 @@ export const AdminSettings: React.FC = () => {
                           </div>
                         </div>
                       )}
+                    </div>
+
+                    {/* Product Actions */}
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openProductModal(product)}
+                        >
+                          <Edit className="w-3 h-3 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => syncSingleProduct(product.id)}
+                          disabled={syncingProductId === product.id}
+                        >
+                          <RefreshCw className={`w-3 h-3 mr-1 ${syncingProductId === product.id ? 'animate-spin' : ''}`} />
+                          {syncingProductId === product.id ? 'Syncing...' : 'Sync'}
+                        </Button>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {product.prices?.length || 0} price{product.prices?.length !== 1 ? 's' : ''}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -758,6 +891,76 @@ export const AdminSettings: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Product Modal */}
+      {showProductModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                {editingProduct ? 'Edit Product' : 'Create Product'}
+              </h3>
+            </div>
+
+            <form onSubmit={handleProductSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Product Name
+                </label>
+                <Input
+                  type="text"
+                  value={productForm.name}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter product name"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={productForm.description}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Enter product description"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="active"
+                  checked={productForm.active}
+                  onChange={(e) => setProductForm(prev => ({ ...prev, active: e.target.checked }))}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="active" className="ml-2 block text-sm text-gray-900">
+                  Active Product
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-gray-200">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closeProductModal}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                >
+                  {editingProduct ? 'Update Product' : 'Create Product'}
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
       )}

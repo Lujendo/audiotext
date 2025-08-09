@@ -636,11 +636,12 @@ app.post("/api/stripe/sync-products", async (c) => {
 
     for (const productData of products) {
       // Create product in Stripe
-      const product = await stripeService.createProduct(
-        productData.name,
-        productData.description,
-        { plan_type: productData.planType }
-      );
+      const product = await stripeService.createProduct({
+        name: productData.name,
+        description: productData.description,
+        active: true,
+        metadata: { plan_type: productData.planType }
+      });
 
       // Create price for the product
       const price = await stripeService.createPrice(
@@ -787,6 +788,139 @@ app.post("/api/stripe/webhook", async (c) => {
   } catch (error) {
     console.error('Webhook error:', error);
     return c.json({ error: 'Webhook processing failed' }, 500);
+  }
+});
+
+// Enhanced Stripe Product Management Endpoints
+
+// Create new Stripe product
+app.post("/api/stripe/products", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware manually
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult; // Return error response if authentication failed
+  }
+
+  const auth = c.get('auth');
+
+  // Check if user is admin
+  if (auth?.user?.role !== 'admin') {
+    return c.json({ error: 'Unauthorized - Admin access required' }, 403);
+  }
+
+  try {
+    const { name, description, active, metadata } = await c.req.json();
+
+    if (!name) {
+      return c.json({ error: 'Product name is required' }, 400);
+    }
+
+    const stripe = new StripeService(c.env.STRIPE_SECRET_KEY);
+
+    const product = await stripe.createProduct({
+      name,
+      description: description || '',
+      active: active !== false,
+      metadata: metadata || {}
+    });
+
+    return c.json({ product });
+  } catch (error) {
+    console.error('Product creation error:', error);
+    return c.json({ error: 'Failed to create product' }, 500);
+  }
+});
+
+// Update existing Stripe product
+app.put("/api/stripe/products/:id", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware manually
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult; // Return error response if authentication failed
+  }
+
+  const auth = c.get('auth');
+
+  // Check if user is admin
+  if (auth?.user?.role !== 'admin') {
+    return c.json({ error: 'Unauthorized - Admin access required' }, 403);
+  }
+
+  try {
+    const productId = c.req.param('id');
+    const { name, description, active, metadata } = await c.req.json();
+
+    const stripe = new StripeService(c.env.STRIPE_SECRET_KEY);
+
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+    if (active !== undefined) updateData.active = active;
+    if (metadata !== undefined) updateData.metadata = metadata;
+
+    const product = await stripe.updateProduct(productId, updateData);
+
+    return c.json({ product });
+  } catch (error) {
+    console.error('Product update error:', error);
+    return c.json({ error: 'Failed to update product' }, 500);
+  }
+});
+
+// Sync single Stripe product
+app.post("/api/stripe/sync-product/:id", async (c) => {
+  const jwtService = c.get('jwtService');
+  const sessionService = c.get('sessionService');
+  const userRepo = c.get('userRepo');
+
+  // Apply authentication middleware manually
+  const authMiddleware = createAuthMiddleware(jwtService, sessionService, userRepo);
+  const authResult = await authMiddleware(c, async () => {});
+
+  if (authResult) {
+    return authResult; // Return error response if authentication failed
+  }
+
+  const auth = c.get('auth');
+
+  // Check if user is admin
+  if (auth?.user?.role !== 'admin') {
+    return c.json({ error: 'Unauthorized - Admin access required' }, 403);
+  }
+
+  try {
+    const productId = c.req.param('id');
+    const stripe = new StripeService(c.env.STRIPE_SECRET_KEY);
+
+    // Fetch the specific product from Stripe
+    const product = await stripe.getProduct(productId);
+
+    if (!product) {
+      return c.json({ error: 'Product not found' }, 404);
+    }
+
+    // Here you could sync the product to your local database if needed
+    // For now, we'll just return the updated product data
+
+    return c.json({
+      message: 'Product synced successfully',
+      product
+    });
+  } catch (error) {
+    console.error('Product sync error:', error);
+    return c.json({ error: 'Failed to sync product' }, 500);
   }
 });
 

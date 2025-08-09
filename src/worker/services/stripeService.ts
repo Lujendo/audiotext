@@ -76,11 +76,17 @@ export class StripeService {
   }
 
   // Product Management
-  async createProduct(name: string, description: string, metadata: Record<string, string> = {}): Promise<StripeProduct> {
+  async createProduct(productData: {
+    name: string;
+    description?: string;
+    active?: boolean;
+    metadata?: Record<string, string>;
+  }): Promise<StripeProduct> {
     const body = new URLSearchParams({
-      name,
-      description,
-      ...Object.entries(metadata).reduce((acc, [key, value]) => {
+      name: productData.name,
+      description: productData.description || '',
+      active: (productData.active !== false).toString(),
+      ...Object.entries(productData.metadata || {}).reduce((acc, [key, value]) => {
         acc[`metadata[${key}]`] = value;
         return acc;
       }, {} as Record<string, string>)
@@ -113,6 +119,10 @@ export class StripeService {
 
   async listProducts(): Promise<{ data: StripeProduct[] }> {
     return this.makeRequest('/products?active=true');
+  }
+
+  async getProduct(productId: string): Promise<StripeProduct> {
+    return this.makeRequest(`/products/${productId}`);
   }
 
   // Price Management
