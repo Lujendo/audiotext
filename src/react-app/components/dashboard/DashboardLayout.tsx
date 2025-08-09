@@ -24,7 +24,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home, current: true },
-    { name: 'Upload Audio', href: '/dashboard/upload', icon: Upload, current: false },
+    { name: 'Audio Extraction', href: '/extract', icon: Upload, current: false },
     { name: 'Transcriptions', href: '/dashboard/transcriptions', icon: FileText, current: false },
     { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3, current: false },
     { name: 'Search', href: '/dashboard/search', icon: Search, current: false },

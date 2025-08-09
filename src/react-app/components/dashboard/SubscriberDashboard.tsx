@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Mic,
   Clock,
@@ -14,6 +15,7 @@ import {
 import { Button } from '../ui/Button';
 
 export const SubscriberDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const recentTranscriptions = [
     { id: 1, title: 'Weekly Team Meeting', duration: '32:15', date: '1 hour ago', status: 'completed' },
     { id: 2, title: 'Client Call Recording', duration: '18:45', date: '3 hours ago', status: 'completed' },
@@ -59,7 +61,12 @@ export const SubscriberDashboard: React.FC = () => {
           </div>
           <h3 className="text-lg font-semibold mb-2">Upload Audio</h3>
           <p className="text-blue-100 text-sm mb-4">High-quality transcription</p>
-          <Button variant="secondary" size="sm" className="bg-white text-blue-600 hover:bg-blue-50">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="bg-white text-blue-600 hover:bg-blue-50"
+            onClick={() => navigate('/extract')}
+          >
             Start Upload
           </Button>
         </div>

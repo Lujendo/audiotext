@@ -1,9 +1,10 @@
 import React from 'react';
-import { 
-  Briefcase, 
-  Clock, 
-  FileText, 
-  Users, 
+import { useNavigate } from 'react-router-dom';
+import {
+  Briefcase,
+  Clock,
+  FileText,
+  Users,
   Upload,
   Calendar,
   Download,
@@ -14,6 +15,7 @@ import {
 import { Button } from '../ui/Button';
 
 export const ProfessionalDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const recentMeetings = [
     { id: 1, title: 'Q4 Strategy Meeting', participants: 8, duration: '1:15:30', date: '1 hour ago', status: 'completed' },
     { id: 2, title: 'Client Presentation Review', participants: 5, duration: '45:20', date: '3 hours ago', status: 'completed' },
@@ -44,7 +46,12 @@ export const ProfessionalDashboard: React.FC = () => {
           </div>
           <h3 className="text-lg font-semibold mb-2">Upload Meeting</h3>
           <p className="text-blue-100 text-sm mb-4">Record or upload meeting audio</p>
-          <Button variant="secondary" size="sm" className="bg-white text-blue-600 hover:bg-blue-50">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="bg-white text-blue-600 hover:bg-blue-50"
+            onClick={() => navigate('/extract')}
+          >
             Start Upload
           </Button>
         </div>

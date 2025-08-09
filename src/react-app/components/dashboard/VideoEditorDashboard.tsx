@@ -1,9 +1,10 @@
 import React from 'react';
-import { 
-  Video, 
-  Clock, 
-  FileText, 
-  Scissors, 
+import { useNavigate } from 'react-router-dom';
+import {
+  Video,
+  Clock,
+  FileText,
+  Scissors,
   Upload,
   Play,
   Download,
@@ -15,6 +16,7 @@ import {
 import { Button } from '../ui/Button';
 
 export const VideoEditorDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const recentProjects = [
     { id: 1, title: 'Corporate Training Video', type: 'Educational', duration: '1:25:30', date: '1 hour ago', status: 'processing' },
     { id: 2, title: 'Product Demo Walkthrough', type: 'Marketing', duration: '18:45', date: '4 hours ago', status: 'completed' },
@@ -52,7 +54,12 @@ export const VideoEditorDashboard: React.FC = () => {
           </div>
           <h3 className="text-lg font-semibold mb-2">Upload Video</h3>
           <p className="text-blue-100 text-sm mb-4">Extract audio from video</p>
-          <Button variant="secondary" size="sm" className="bg-white text-blue-600 hover:bg-blue-50">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="bg-white text-blue-600 hover:bg-blue-50"
+            onClick={() => navigate('/extract')}
+          >
             Upload Video
           </Button>
         </div>

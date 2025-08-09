@@ -48,7 +48,7 @@ export const StudentDashboard: React.FC = () => {
           <Button
             variant="secondary"
             className="mt-4 bg-white text-blue-600 hover:bg-blue-50"
-            onClick={() => navigate('/transcribe')}
+            onClick={() => navigate('/extract')}
           >
             Start Upload
           </Button>

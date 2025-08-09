@@ -1,9 +1,10 @@
 import React from 'react';
-import { 
-  PenTool, 
-  Clock, 
-  FileText, 
-  Target, 
+import { useNavigate } from 'react-router-dom';
+import {
+  PenTool,
+  Clock,
+  FileText,
+  Target,
   Upload,
   Edit3,
   Download,
@@ -16,6 +17,7 @@ import {
 import { Button } from '../ui/Button';
 
 export const CopywriterDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const recentProjects = [
     { id: 1, title: 'Product Launch Campaign', type: 'Interview', duration: '35:20', date: '2 hours ago', status: 'editing' },
     { id: 2, title: 'Customer Testimonials', type: 'Recording', duration: '28:45', date: '5 hours ago', status: 'completed' },
@@ -53,7 +55,12 @@ export const CopywriterDashboard: React.FC = () => {
           </div>
           <h3 className="text-lg font-semibold mb-2">Upload Interview</h3>
           <p className="text-blue-100 text-sm mb-4">Record client interviews</p>
-          <Button variant="secondary" size="sm" className="bg-white text-blue-600 hover:bg-blue-50">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="bg-white text-blue-600 hover:bg-blue-50"
+            onClick={() => navigate('/extract')}
+          >
             Start Recording
           </Button>
         </div>

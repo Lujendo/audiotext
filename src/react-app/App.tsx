@@ -5,7 +5,7 @@ import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { Dashboard } from './pages/Dashboard';
-import { TranscriptionPage } from './pages/TranscriptionPage';
+import { ExtractionPage } from './pages/ExtractionPage';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -83,10 +83,10 @@ function App() {
             }
           />
           <Route
-            path="/transcribe"
+            path="/extract"
             element={
               <ProtectedRoute>
-                <TranscriptionPage />
+                <ExtractionPage />
               </ProtectedRoute>
             }
           />
