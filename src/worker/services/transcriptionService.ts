@@ -31,20 +31,34 @@ export class TranscriptionService {
    */
   async transcribeAudio(audioFile: DatabaseAudioFile): Promise<TranscriptionResult> {
     try {
+      console.log(`Starting transcription for file: ${audioFile.filename}`);
+
       // Get audio file from R2 bucket
       const audioObject = await this.bucket.get(audioFile.filename);
       if (!audioObject) {
         throw new Error('Audio file not found in storage');
       }
 
+      console.log(`Audio file retrieved, size: ${audioObject.size} bytes`);
+
       // Convert to array buffer
       const audioBuffer = await audioObject.arrayBuffer();
       const audioArray = new Uint8Array(audioBuffer);
 
-      // Convert audio to base64 for Whisper API
-      const base64Audio = btoa(String.fromCharCode(...audioArray));
+      // Convert audio to base64 for Whisper API using chunked approach to avoid stack overflow
+      const chunkSize = 8192;
+      let base64Audio = '';
+
+      for (let i = 0; i < audioArray.length; i += chunkSize) {
+        const chunk = audioArray.slice(i, i + chunkSize);
+        const chunkString = Array.from(chunk, byte => String.fromCharCode(byte)).join('');
+        base64Audio += btoa(chunkString);
+      }
+
+      console.log(`Base64 conversion completed, length: ${base64Audio.length}`);
 
       // Use Whisper Large V3 Turbo for high-quality transcription
+      console.log('Calling Cloudflare AI Whisper model...');
       const response = await this.ai.run('@cf/openai/whisper-large-v3-turbo', {
         audio: base64Audio,
         task: 'transcribe',
@@ -52,6 +66,8 @@ export class TranscriptionService {
         vad_filter: true, // Voice activity detection
         initial_prompt: 'This is a professional audio transcription. Please provide accurate punctuation and formatting.',
       });
+
+      console.log('AI transcription completed:', response);
 
       // Process the response
       const segments: TranscriptionSegment[] = [];
