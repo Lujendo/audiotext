@@ -51,7 +51,7 @@ export const RegisterPage: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="max-w-md w-full">
+        <div className="max-w-6xl w-full">
           {/* Welcome Message */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Get Started</h1>

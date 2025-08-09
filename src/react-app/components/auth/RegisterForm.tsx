@@ -89,14 +89,8 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto px-4">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">Create your account</h2>
-        <p className="text-gray-600">Join AudioText and start transcribing</p>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8">
-        <form onSubmit={handleSubmit} className="space-y-8">
+    <div className="w-full">
+      <form onSubmit={handleSubmit} className="space-y-8">
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
             {error}
@@ -285,22 +279,21 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
         >
           Create account
         </Button>
-        </form>
+      </form>
 
-        {showSwitchLink && (
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
-              Already have an account?{' '}
-              <button
-                onClick={onSwitchToLogin}
-                className="text-blue-600 hover:text-blue-500 font-medium"
-              >
-                Sign in
-              </button>
-            </p>
-          </div>
-        )}
-      </div>
+      {showSwitchLink && (
+        <div className="mt-6 text-center">
+          <p className="text-gray-600">
+            Already have an account?{' '}
+            <button
+              onClick={onSwitchToLogin}
+              className="text-blue-600 hover:text-blue-500 font-medium"
+            >
+              Sign in
+            </button>
+          </p>
+        </div>
+      )}
     </div>
   );
 };
