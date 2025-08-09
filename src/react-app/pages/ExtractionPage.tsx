@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Upload,
@@ -23,6 +23,11 @@ import {
   Wand2,
   Brain,
   Target,
+  SkipBack,
+  SkipForward,
+  Share2,
+  Download,
+  VolumeX,
   Headphones,
   FileVideo,
   Music,
@@ -66,6 +71,10 @@ export const ExtractionPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [volume, setVolume] = useState(1);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [isLooping, setIsLooping] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [editedContent, setEditedContent] = useState('');
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -79,6 +88,8 @@ export const ExtractionPage: React.FC = () => {
     customPrompt: '',
     outputFormat: 'standard',
   });
+
+
 
   // Check if user has access to advanced features
   const hasAdvancedAccess = user?.role !== 'student' && user?.role !== 'subscriber';
@@ -212,6 +223,60 @@ export const ExtractionPage: React.FC = () => {
       setIsPlaying(!isPlaying);
     }
   }, [isPlaying]);
+
+  // Professional Audio Player Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Only handle shortcuts when not typing in input fields
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      switch (e.key.toLowerCase()) {
+        case ' ':
+        case 'k':
+          e.preventDefault();
+          togglePlayPause();
+          break;
+        case 'arrowleft':
+          e.preventDefault();
+          if (audioRef.current) {
+            audioRef.current.currentTime = Math.max(0, currentTime - (e.shiftKey ? 30 : 5));
+          }
+          break;
+        case 'arrowright':
+          e.preventDefault();
+          if (audioRef.current) {
+            audioRef.current.currentTime = Math.min(duration, currentTime + (e.shiftKey ? 30 : 5));
+          }
+          break;
+        case 'home':
+          e.preventDefault();
+          if (audioRef.current) {
+            audioRef.current.currentTime = 0;
+            setCurrentTime(0);
+          }
+          break;
+        case 'm':
+          e.preventDefault();
+          setIsMuted(!isMuted);
+          if (audioRef.current) {
+            audioRef.current.muted = !isMuted;
+          }
+          break;
+        case 'l':
+          e.preventDefault();
+          setIsLooping(!isLooping);
+          if (audioRef.current) {
+            audioRef.current.loop = !isLooping;
+          }
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyPress);
+    return () => document.removeEventListener('keydown', handleKeyPress);
+  }, [isPlaying, currentTime, duration, isMuted, isLooping, togglePlayPause]);
 
   const handleTimeUpdate = useCallback(() => {
     if (audioRef.current) {
@@ -579,8 +644,13 @@ export const ExtractionPage: React.FC = () => {
               <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">Audio Player</h2>
-                    <p className="text-sm text-gray-600 mt-1">Review your audio while editing the transcription</p>
+                    <h2 className="text-xl font-semibold text-gray-900 flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <FileAudio className="w-4 h-4 text-white" />
+                      </div>
+                      <span>Professional Audio Player</span>
+                    </h2>
+                    <p className="text-sm text-gray-600 mt-1">Advanced audio controls with professional features</p>
                   </div>
                   <div className="flex items-center space-x-3">
                     {audioFile.status === 'processing' && (
@@ -624,70 +694,269 @@ export const ExtractionPage: React.FC = () => {
                       />
 
                       <div className="space-y-4">
-                        <div className="flex items-center justify-center space-x-6">
+                        {/* Professional Control Panel */}
+                        <div className="flex items-center justify-center space-x-8 mb-6">
+                          {/* Skip Backward */}
                           <Button
                             variant="ghost"
-                            size="sm"
+                            size="lg"
+                            onClick={() => {
+                              if (audioRef.current) {
+                                audioRef.current.currentTime = Math.max(0, currentTime - 10);
+                              }
+                            }}
+                            className="w-12 h-12 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-all duration-200"
+                            title="Skip back 10 seconds"
+                          >
+                            <SkipBack className="w-5 h-5" />
+                          </Button>
+
+                          {/* Restart */}
+                          <Button
+                            variant="ghost"
+                            size="lg"
                             onClick={() => {
                               if (audioRef.current) {
                                 audioRef.current.currentTime = 0;
                                 setCurrentTime(0);
                               }
                             }}
-                            className="text-gray-600 hover:text-gray-800"
+                            className="w-12 h-12 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-all duration-200"
+                            title="Restart from beginning"
                           >
-                            <RotateCcw className="w-4 h-4" />
+                            <RotateCcw className="w-5 h-5" />
                           </Button>
 
+                          {/* Main Play/Pause Button */}
                           <Button
                             variant="primary"
                             size="lg"
                             onClick={togglePlayPause}
-                            className="w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-lg"
+                            className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300"
+                            title={isPlaying ? "Pause" : "Play"}
                           >
-                            {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
+                            {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
                           </Button>
 
-                          <div className="flex items-center space-x-2">
-                            <Volume2 className="w-4 h-4 text-gray-500" />
-                            <input
-                              type="range"
-                              min="0"
-                              max="1"
-                              step="0.1"
-                              defaultValue="1"
+                          {/* Skip Forward */}
+                          <Button
+                            variant="ghost"
+                            size="lg"
+                            onClick={() => {
+                              if (audioRef.current) {
+                                audioRef.current.currentTime = Math.min(duration, currentTime + 10);
+                              }
+                            }}
+                            className="w-12 h-12 rounded-full text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-all duration-200"
+                            title="Skip forward 10 seconds"
+                          >
+                            <SkipForward className="w-5 h-5" />
+                          </Button>
+
+                          {/* Playback Speed */}
+                          <div className="flex flex-col items-center space-y-1">
+                            <select
+                              value={playbackRate}
                               onChange={(e) => {
+                                const newRate = parseFloat(e.target.value);
+                                setPlaybackRate(newRate);
                                 if (audioRef.current) {
-                                  audioRef.current.volume = parseFloat(e.target.value);
+                                  audioRef.current.playbackRate = newRate;
                                 }
                               }}
-                              className="w-20 accent-blue-500"
-                            />
+                              className="text-xs bg-white border border-gray-300 rounded-lg px-3 py-2 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm"
+                              title="Playback speed"
+                            >
+                              <option value="0.25">0.25x</option>
+                              <option value="0.5">0.5x</option>
+                              <option value="0.75">0.75x</option>
+                              <option value="1">1x</option>
+                              <option value="1.25">1.25x</option>
+                              <option value="1.5">1.5x</option>
+                              <option value="1.75">1.75x</option>
+                              <option value="2">2x</option>
+                            </select>
+                            <span className="text-xs text-gray-500 font-medium">Speed</span>
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-sm text-gray-600">
-                            <span className="font-mono">{formatTime(currentTime)}</span>
-                            <span className="font-mono">{formatTime(duration)}</span>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2 cursor-pointer"
-                               onClick={(e) => {
-                                 if (audioRef.current && duration > 0) {
-                                   const rect = e.currentTarget.getBoundingClientRect();
-                                   const percent = (e.clientX - rect.left) / rect.width;
-                                   const newTime = percent * duration;
-                                   audioRef.current.currentTime = newTime;
-                                   setCurrentTime(newTime);
-                                 }
-                               }}>
-                            <div
-                              className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-300 relative"
-                              style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-                            >
-                              <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-blue-500 rounded-full shadow-md"></div>
+                        {/* Enhanced Progress Section */}
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                              <span className="text-lg font-mono font-semibold text-gray-900">{formatTime(currentTime)}</span>
+                              <span className="text-sm text-gray-500">/</span>
+                              <span className="text-lg font-mono font-semibold text-gray-700">{formatTime(duration)}</span>
+                            </div>
+                            <div className="flex items-center space-x-2 text-sm text-gray-600">
+                              <Clock className="w-4 h-4" />
+                              <span>{Math.round((currentTime / duration) * 100) || 0}% complete</span>
                             </div>
                           </div>
+
+                          {/* Professional Progress Bar */}
+                          <div className="relative">
+                            <div
+                              className="w-full bg-gradient-to-r from-gray-200 to-gray-300 rounded-full h-3 cursor-pointer shadow-inner"
+                              onClick={(e) => {
+                                if (audioRef.current && duration > 0) {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const percent = (e.clientX - rect.left) / rect.width;
+                                  const newTime = percent * duration;
+                                  audioRef.current.currentTime = newTime;
+                                  setCurrentTime(newTime);
+                                }
+                              }}
+                              title="Click to seek"
+                            >
+                              <div
+                                className="bg-gradient-to-r from-blue-500 via-purple-500 to-blue-600 h-3 rounded-full transition-all duration-300 relative shadow-lg"
+                                style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                              >
+                                <div className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 w-5 h-5 bg-white border-3 border-blue-500 rounded-full shadow-lg hover:scale-110 transition-transform duration-200 cursor-grab active:cursor-grabbing"></div>
+                              </div>
+                            </div>
+
+                            {/* Time markers */}
+                            <div className="flex justify-between mt-1 px-1">
+                              {Array.from({ length: 5 }, (_, i) => (
+                                <div key={i} className="text-xs text-gray-400 font-mono">
+                                  {formatTime((duration / 4) * i)}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Secondary Controls */}
+                        <div className="flex items-center justify-between bg-gray-50 rounded-lg p-4">
+                          {/* Volume Control */}
+                          <div className="flex items-center space-x-3">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setIsMuted(!isMuted);
+                                if (audioRef.current) {
+                                  audioRef.current.muted = !isMuted;
+                                }
+                              }}
+                              className={`${isMuted ? 'text-red-500' : 'text-gray-600'} hover:text-gray-800`}
+                              title={isMuted ? "Unmute" : "Mute"}
+                            >
+                              {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                            </Button>
+                            <div className="flex items-center space-x-2">
+                              <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value={volume}
+                                onChange={(e) => {
+                                  const newVolume = parseFloat(e.target.value);
+                                  setVolume(newVolume);
+                                  if (audioRef.current) {
+                                    audioRef.current.volume = newVolume;
+                                  }
+                                }}
+                                className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                                title="Volume control"
+                              />
+                              <span className="text-xs text-gray-500 font-mono w-8">{Math.round(volume * 100)}%</span>
+                            </div>
+                          </div>
+
+                          {/* Audio Info */}
+                          <div className="flex items-center space-x-6 text-sm text-gray-600">
+                            <div className="flex items-center space-x-1">
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                              <span>Live</span>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              <Zap className="w-4 h-4" />
+                              <span>High Quality</span>
+                            </div>
+                          </div>
+
+                          {/* Additional Controls */}
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setIsLooping(!isLooping);
+                                if (audioRef.current) {
+                                  audioRef.current.loop = !isLooping;
+                                }
+                              }}
+                              className={`${isLooping ? 'text-blue-600 bg-blue-50' : 'text-gray-500'} hover:text-blue-700 transition-colors`}
+                              title={isLooping ? "Disable loop" : "Enable loop"}
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-gray-500 hover:text-gray-700"
+                              title="Download audio"
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-gray-500 hover:text-gray-700"
+                              title="Share audio"
+                            >
+                              <Share2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Keyboard Shortcuts Help */}
+                        <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-lg p-4 border border-gray-200 mt-4">
+                          <details className="group">
+                            <summary className="flex items-center justify-between cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-600 rounded flex items-center justify-center">
+                                  <span className="text-white text-xs font-bold">⌨</span>
+                                </div>
+                                <span>Keyboard Shortcuts</span>
+                              </div>
+                              <div className="text-gray-400 group-open:rotate-180 transition-transform">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </summary>
+                            <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+                              <div className="flex items-center justify-between bg-white rounded px-2 py-1 border">
+                                <span className="text-gray-600">Play/Pause</span>
+                                <kbd className="bg-gray-100 px-1 rounded font-mono">Space</kbd>
+                              </div>
+                              <div className="flex items-center justify-between bg-white rounded px-2 py-1 border">
+                                <span className="text-gray-600">Skip ±5s</span>
+                                <kbd className="bg-gray-100 px-1 rounded font-mono">← →</kbd>
+                              </div>
+                              <div className="flex items-center justify-between bg-white rounded px-2 py-1 border">
+                                <span className="text-gray-600">Skip ±30s</span>
+                                <kbd className="bg-gray-100 px-1 rounded font-mono">Shift + ← →</kbd>
+                              </div>
+                              <div className="flex items-center justify-between bg-white rounded px-2 py-1 border">
+                                <span className="text-gray-600">Restart</span>
+                                <kbd className="bg-gray-100 px-1 rounded font-mono">Home</kbd>
+                              </div>
+                              <div className="flex items-center justify-between bg-white rounded px-2 py-1 border">
+                                <span className="text-gray-600">Mute</span>
+                                <kbd className="bg-gray-100 px-1 rounded font-mono">M</kbd>
+                              </div>
+                              <div className="flex items-center justify-between bg-white rounded px-2 py-1 border">
+                                <span className="text-gray-600">Loop</span>
+                                <kbd className="bg-gray-100 px-1 rounded font-mono">L</kbd>
+                              </div>
+                            </div>
+                          </details>
                         </div>
                       </div>
                     </>
