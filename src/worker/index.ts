@@ -1008,6 +1008,31 @@ app.post("/api/stripe/prices", async (c) => {
 
 // Audio Upload and Transcription Endpoints
 
+// Test endpoint for debugging
+app.post("/api/audio/test", async (c) => {
+  console.log('Test endpoint called');
+  console.log('Headers:', c.req.header());
+  console.log('Method:', c.req.method);
+
+  try {
+    const contentType = c.req.header('content-type');
+    console.log('Content-Type:', contentType);
+
+    if (contentType?.includes('multipart/form-data')) {
+      const formData = await c.req.formData();
+      console.log('FormData entries:', Array.from(formData.entries()).map(([key, value]) => [key, typeof value, value instanceof File ? value.name : value]));
+    } else {
+      const body = await c.req.text();
+      console.log('Body:', body.substring(0, 100));
+    }
+
+    return c.json({ success: true, message: 'Test endpoint working' });
+  } catch (error) {
+    console.error('Test endpoint error:', error);
+    return c.json({ error: 'Test failed', details: String(error) }, 500);
+  }
+});
+
 // Upload audio file
 app.post("/api/audio/upload", async (c) => {
   const jwtService = c.get('jwtService');
@@ -1023,13 +1048,17 @@ app.post("/api/audio/upload", async (c) => {
   }
 
   const auth = c.get('auth');
+  console.log('Upload endpoint called, user:', auth?.user?.email);
 
   try {
     const formData = await c.req.formData();
     const audioFile = formData.get('audio') as File;
     const projectId = formData.get('projectId') as string;
 
+    console.log('Audio file:', audioFile?.name, 'Size:', audioFile?.size, 'Type:', audioFile?.type);
+
     if (!audioFile) {
+      console.log('No audio file provided');
       return c.json({ error: 'No audio file provided' }, 400);
     }
 
@@ -1074,7 +1103,7 @@ app.post("/api/audio/upload", async (c) => {
       audioFile.name,
       audioFile.size,
       audioFile.type,
-      `https://audiotext-files.${c.env.ENVIRONMENT}.workers.dev/${filename}`,
+      filename, // Store just the filename, construct URL when serving
       'processing',
       new Date().toISOString(),
       new Date().toISOString()
@@ -1097,6 +1126,33 @@ app.post("/api/audio/upload", async (c) => {
   } catch (error) {
     console.error('Audio upload error:', error);
     return c.json({ error: 'Failed to upload audio file' }, 500);
+  }
+});
+
+// Serve audio files from R2
+app.get("/api/audio/file/:filename", async (c) => {
+  const filename = c.req.param('filename');
+
+  try {
+    const object = await c.env.AUDIO_BUCKET.get(filename);
+
+    if (!object) {
+      return c.json({ error: 'File not found' }, 404);
+    }
+
+    // Get the content type from metadata or guess from extension
+    const contentType = object.httpMetadata?.contentType || 'audio/mpeg';
+
+    return new Response(object.body, {
+      headers: {
+        'Content-Type': contentType,
+        'Cache-Control': 'public, max-age=31536000',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  } catch (error) {
+    console.error('Error serving audio file:', error);
+    return c.json({ error: 'Failed to serve file' }, 500);
   }
 });
 
@@ -1134,6 +1190,7 @@ app.get("/api/audio/:id", async (c) => {
     return c.json({
       audioFile: {
         ...audioFile,
+        url: `/api/audio/file/${audioFile.url}`, // Construct the correct URL
         transcription: transcription ? {
           ...transcription,
           segments: JSON.parse((transcription.segments as string) || '[]'),
